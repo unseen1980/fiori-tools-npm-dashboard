@@ -1,6 +1,6 @@
 import React from "react";
 
-const SideNavListItem = (props: string) => {
+const SideNavListItem = (props: any) => {
   return (
     <li>
       <a

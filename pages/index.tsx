@@ -1,7 +1,7 @@
 import type { NextPage } from "next";
 import { useEffect, useState } from "react";
 import Head from "next/head";
-import SideNavListItem from "../components/sideNavListItem";
+import SideNavListItem from "../components/SideNavListItem";
 import { npmModules } from "../helpers/constants";
 import Card from "../components/Card";
 
@@ -130,7 +130,8 @@ const Home: NextPage = () => {
         <div className="container mx-auto bg-white">
           <div className="grid grid-cols-3 gap-4">
             {data !== undefined
-              ? data.map((v, i) => <Card key={i} values={v} />)
+              ? //@ts-ignore
+                data.map((v, i) => <Card key={i} values={v} />)
               : ""}
           </div>
         </div>
