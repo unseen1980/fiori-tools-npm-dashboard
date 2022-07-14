@@ -16,7 +16,7 @@ const Card = (props: any) => {
       </div>
     );
   }
-  return "";
+  return <></>;
 };
 
 export default Card;
