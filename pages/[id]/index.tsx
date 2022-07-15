@@ -76,8 +76,13 @@ const Details = () => {
         <div className="w-full pt-10 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
           {data !== undefined ? (
             <div className="container mx-auto bg-white">
-              <h1>Details of: {name}</h1>
               <div className="grid grid-cols-3 gap-4">
+                <div className="col-span-3 ...">
+                  <h3 className="text-lg font-bold text-gray-800">{name}</h3>
+                  <h3 className="text-lg font-bold text-gray-800">
+                    {data.description}
+                  </h3>
+                </div>
                 <div className="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
                   <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
@@ -110,6 +115,46 @@ const Details = () => {
                     ) : (
                       <></>
                     )}
+                  </div>
+                </div>
+                <div className="col-span-3 ...">
+                  <div className="flex flex-col">
+                    <div className="-m-1.5 overflow-x-auto">
+                      <div className="p-1.5 min-w-full inline-block align-middle">
+                        <div className="overflow-hidden">
+                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800 dark:border-gray-700 rounded-xl dark:shadow-slate-700/[.7]">
+                            <thead>
+                              <tr>
+                                <th
+                                  scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                  Version
+                                </th>
+                                <th
+                                  scope="col"
+                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                >
+                                  Release date
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                              {Object.keys(data.time).map((t) => (
+                                <tr>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                    {t}
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                    {moment(data.time[t]).format("lll")}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
