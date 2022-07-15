@@ -38,10 +38,9 @@ function chart() {
   return (
     <div
       style={{
-        maxHeight: "80vh",
+        maxHeight: "100vh",
       }}
     >
-      <h2>Bar Sample with Next.js</h2>
       <Bar
         data={data}
         options={{
