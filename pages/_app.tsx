@@ -13,7 +13,12 @@ function MyApp({ Component, pageProps }: AppProps) {
     setLoading(true);
     searchNpmRegistry("@sap-ux").then((d) => {
       //Appending @sap/generator-fiori because is in different org.
-      const data: any = ["@sap/generator-fiori", ...d].map((npmModule: any) => {
+      const data: any = [
+        "@sap/generator-fiori",
+        ...d,
+        "@sap/ux-ui5-tooling",
+        "@sap/ux-specification",
+      ].map((npmModule: any) => {
         return fectNpmPackage(npmModule);
       });
       Promise.all(data).then((values: any) => {
