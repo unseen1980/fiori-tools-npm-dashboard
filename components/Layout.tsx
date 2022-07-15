@@ -1,11 +1,13 @@
 import Head from "next/head";
 import SideNavListItem from "../components/SideNavListItem";
-import { npmModules } from "../helpers/constants";
 import React from "react";
 import Link from "next/link";
+import { DataContext } from "../pages/_app";
 
 //@ts-ignore
 export default function Layout({ children }) {
+  const dataContext: any = React.useContext(DataContext);
+  console.log("dataContext: ", dataContext);
   return (
     <>
       <Head>
@@ -94,13 +96,14 @@ export default function Layout({ children }) {
 
           <nav className="p-6 w-full flex flex-col flex-wrap">
             <ul className="space-y-1.5">
-              {npmModules.map((npmModule) => (
-                <SideNavListItem
-                  name={npmModule.name}
-                  rev={npmModule._rev}
-                  key={npmModule.name}
-                />
-              ))}
+              {dataContext &&
+                dataContext.map((npmModule: any) => (
+                  <SideNavListItem
+                    name={npmModule.name}
+                    rev={npmModule._rev}
+                    key={npmModule.name}
+                  />
+                ))}
             </ul>
           </nav>
         </div>
