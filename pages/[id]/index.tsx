@@ -80,7 +80,10 @@ const Details = () => {
                 <div className="col-span-3 ...">
                   <h3 className="text-lg font-bold text-gray-800">{name}</h3>
                   <h3 className="text-lg font-bold text-gray-800">
-                    {data.description}
+                    {
+                      //@ts-ignore
+                      data.description
+                    }
                   </h3>
                 </div>
                 <div className="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
@@ -140,16 +143,22 @@ const Details = () => {
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {Object.keys(data.time).map((t) => (
-                                <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                    {t}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {moment(data.time[t]).format("lll")}
-                                  </td>
-                                </tr>
-                              ))}
+                              {
+                                //@ts-ignore
+                                Object.keys(data.time).map((t) => (
+                                  <tr>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                      {t}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {
+                                        //@ts-ignore
+                                        moment(data.time[t]).format("lll")
+                                      }
+                                    </td>
+                                  </tr>
+                                ))
+                              }
                             </tbody>
                           </table>
                         </div>
