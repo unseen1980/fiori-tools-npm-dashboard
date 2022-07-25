@@ -133,28 +133,36 @@ const Home: NextPage = () => {
                           {dataContext !== undefined
                             ? //@ts-ignore
                               dataContext.map((v, i) => (
-                                <tr>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                    {v.name}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {v["dist-tags"].latest}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {
-                                      v.versions[v["dist-tags"].latest].dist
-                                        .fileCount
-                                    }
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {bytesToSize(
-                                      v.versions[v["dist-tags"].latest].dist
-                                        .unpackedSize,
-                                      2,
-                                      true
-                                    )}
-                                  </td>
-                                </tr>
+                                <Link
+                                  key={i}
+                                  href={{
+                                    pathname: "/" + v._rev,
+                                    query: { name: v.name },
+                                  }}
+                                >
+                                  <tr className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                      {v.name}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {v["dist-tags"].latest}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {
+                                        v.versions[v["dist-tags"].latest].dist
+                                          .fileCount
+                                      }
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {bytesToSize(
+                                        v.versions[v["dist-tags"].latest].dist
+                                          .unpackedSize,
+                                        2,
+                                        true
+                                      )}
+                                    </td>
+                                  </tr>
+                                </Link>
                               ))
                             : ""}
                         </tbody>

@@ -40,7 +40,13 @@ const Details = () => {
         labels: Object.keys(d.versions),
         datasets: [
           {
-            label: "Bundle size in MB",
+            label: `Bundle size ${bytesToSize(
+              d.versions[
+                Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+              ].dist.unpackedSize,
+              2,
+              true
+            ).slice(-2)}`,
             data: Object.keys(d.versions).map((ver) => {
               return bytesToSize(d.versions[ver].dist.unpackedSize);
             }),
@@ -89,7 +95,7 @@ const Details = () => {
                 <div className="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
                   <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
-                      Bundle size in MB
+                      Bundle size
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
