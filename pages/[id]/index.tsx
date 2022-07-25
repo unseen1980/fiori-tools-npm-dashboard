@@ -68,7 +68,7 @@ const Details = () => {
 
       setDownloadsChartData(data);
     });
-  }, []);
+  }, [name]);
 
   return (
     <>
@@ -89,7 +89,7 @@ const Details = () => {
                 <div className="flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
                   <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
-                      Bundle size in kB
+                      Bundle size in MB
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
