@@ -55,3 +55,8 @@ export async function downloadCounts(pkg: string, start: any, end: any) {
   const data = await res.json();
   return data.downloads;
 }
+
+export function getPercent(num1: number, num2: number) {
+  const result = ((num2 - num1) / num1) * 100;
+  return result.toFixed(2);
+}

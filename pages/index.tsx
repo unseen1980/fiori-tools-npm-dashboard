@@ -5,7 +5,7 @@ import Layout from "../components/Layout";
 import Link from "next/link";
 import React from "react";
 import { DataContext } from "../pages/_app";
-import { downloadCounts, bytesToSize } from "../helpers/utils";
+import { downloadCounts, bytesToSize, getPercent } from "../helpers/utils";
 import moment from "moment";
 
 const Home: NextPage = () => {
@@ -74,27 +74,6 @@ const Home: NextPage = () => {
                 value: numOfTotalDownloads,
               }}
             />
-
-            {/* <div className="grid grid-cols-3 gap-4">
-            {dataContext !== undefined
-              ? //@ts-ignore
-                dataContext.map((v, i) => {
-                  return (
-                    <Link
-                      key={i}
-                      href={{
-                        pathname: "/" + v._rev,
-                        query: { name: v.name },
-                      }}
-                    >
-                      <div className="cursor-pointer">
-                        <Card values={v} />
-                      </div>
-                    </Link>
-                  );
-                })
-              : ""}
-          </div> */}
             <div className="col-span-3 ...">
               <div className="flex flex-col">
                 <div className="-m-1.5 overflow-x-auto">
@@ -159,6 +138,48 @@ const Home: NextPage = () => {
                                           .unpackedSize,
                                         2,
                                         true
+                                      )}
+
+                                      {parseFloat(
+                                        getPercent(
+                                          v.versions[
+                                            Object.keys(v.versions)[
+                                              Object.keys(v.versions).length - 2
+                                            ]
+                                          ].dist.unpackedSize,
+                                          v.versions[
+                                            Object.keys(v.versions)[
+                                              Object.keys(v.versions).length - 1
+                                            ]
+                                          ].dist.unpackedSize
+                                        )
+                                      ) === 0.0 ? (
+                                        <b> - </b>
+                                      ) : parseFloat(
+                                          getPercent(
+                                            v.versions[
+                                              Object.keys(v.versions)[
+                                                Object.keys(v.versions).length -
+                                                  2
+                                              ]
+                                            ].dist.unpackedSize,
+                                            v.versions[
+                                              Object.keys(v.versions)[
+                                                Object.keys(v.versions).length -
+                                                  1
+                                              ]
+                                            ].dist.unpackedSize
+                                          )
+                                        ) > 0 ? (
+                                        <b className="text-green-400">
+                                          {" "}
+                                          &#8599;{" "}
+                                        </b>
+                                      ) : (
+                                        <b className="text-red-400">
+                                          {" "}
+                                          &#8601;{" "}
+                                        </b>
                                       )}
                                     </td>
                                   </tr>
