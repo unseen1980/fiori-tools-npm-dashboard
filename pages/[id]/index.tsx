@@ -151,8 +151,8 @@ const Details = () => {
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                               {
                                 //@ts-ignore
-                                Object.keys(data.time).map((t) => (
-                                  <tr>
+                                Object.keys(data.time).map((t, i) => (
+                                  <tr key={i}>
                                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
                                       {t}
                                     </td>

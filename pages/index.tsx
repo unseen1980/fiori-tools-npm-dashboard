@@ -26,12 +26,12 @@ const Home: NextPage = () => {
             .reduce((a: any, b: any) => a + b, 0)
         )
         .reduce((a: any, b: any) => a + b, 0);
-      console.log("NUM: ", totalNum);
       setNumOfTotalDownloads(totalNum);
     });
   };
 
   useEffect(() => {
+    setLoading(true);
     if (dataContext !== undefined) {
       const mainPageCardsData = {
         numOfSapModules: dataContext.filter((m: any) =>
@@ -48,6 +48,7 @@ const Home: NextPage = () => {
       );
       setMainPageCardsDataSap(mainPageCardsData.numOfSapModules);
       setMainPageCardsDataSapUx(mainPageCardsData.numOfSapUxModules);
+      setLoading(false);
     }
   }, [dataContext]);
 
@@ -55,107 +56,104 @@ const Home: NextPage = () => {
     <Layout>
       <div className="w-full pt-10 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
         <div className="container mx-auto bg-white">
-          <div className="grid grid-cols-3 gap-4">
-            <MainPageCard
-              values={{
-                title: "Number of @sap npm modules",
-                value: mainPageCardDataSap,
-              }}
-            />
-            <MainPageCard
-              values={{
-                title: "Number of @sap-ux npm modules",
-                value: mainPageCardDataSapUx,
-              }}
-            />
-            <MainPageCard
-              values={{
-                title: "Number of total downloads in last 30 days",
-                value: numOfTotalDownloads,
-              }}
-            />
-            <div className="col-span-3 ...">
-              <div className="flex flex-col">
-                <div className="-m-1.5 overflow-x-auto">
-                  <div className="p-1.5 min-w-full inline-block align-middle">
-                    <div className="overflow-hidden">
-                      <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800 dark:border-gray-700 rounded-xl dark:shadow-slate-700/[.7]">
-                        <thead>
-                          <tr>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                            >
-                              Module name
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                            >
-                              Version
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                            >
-                              Number of files
-                            </th>
-                            <th
-                              scope="col"
-                              className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                            >
-                              Filesize
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                          {dataContext !== undefined
-                            ? //@ts-ignore
-                              dataContext.map((v, i) => (
-                                <Link
-                                  key={i}
-                                  href={{
-                                    pathname: "/" + v._rev,
-                                    query: { name: v.name },
-                                  }}
-                                >
-                                  <tr className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                      {v.name}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                      {v["dist-tags"].latest}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                      {
-                                        v.versions[v["dist-tags"].latest].dist
-                                          .fileCount
-                                      }
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                      {bytesToSize(
-                                        v.versions[v["dist-tags"].latest].dist
-                                          .unpackedSize,
-                                        2,
-                                        true
-                                      )}
+          {isLoading && (
+            <div className="grid grid-cols-1 place-items-center">
+              <div
+                className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"
+                role="status"
+                aria-label="loading"
+              >
+                <span className="sr-only">Loading...</span>
+              </div>
+            </div>
+          )}
+          {!isLoading && (
+            <div className="grid grid-cols-3 gap-4">
+              <MainPageCard
+                values={{
+                  title: "Number of @sap npm modules",
+                  value: mainPageCardDataSap,
+                }}
+              />
+              <MainPageCard
+                values={{
+                  title: "Number of @sap-ux npm modules",
+                  value: mainPageCardDataSapUx,
+                }}
+              />
+              <MainPageCard
+                values={{
+                  title: "Number of total downloads in last 30 days",
+                  value: numOfTotalDownloads,
+                }}
+              />
+              <div className="col-span-3 ...">
+                <div className="flex flex-col">
+                  <div className="-m-1.5 overflow-x-auto">
+                    <div className="p-1.5 min-w-full inline-block align-middle">
+                      <div className="overflow-hidden">
+                        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800 dark:border-gray-700 rounded-xl dark:shadow-slate-700/[.7]">
+                          <thead>
+                            <tr>
+                              <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                              >
+                                Module name
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                              >
+                                Version
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                              >
+                                Number of files
+                              </th>
+                              <th
+                                scope="col"
+                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                              >
+                                Filesize
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                            {dataContext !== undefined
+                              ? //@ts-ignore
+                                dataContext.map((v, i) => (
+                                  <Link
+                                    key={i}
+                                    href={{
+                                      pathname: "/" + v._rev,
+                                      query: { name: v.name },
+                                    }}
+                                  >
+                                    <tr className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                        {v.name}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                        {v["dist-tags"].latest}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                        {
+                                          v.versions[v["dist-tags"].latest].dist
+                                            .fileCount
+                                        }
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                        {bytesToSize(
+                                          v.versions[v["dist-tags"].latest].dist
+                                            .unpackedSize,
+                                          2,
+                                          true
+                                        )}
 
-                                      {parseFloat(
-                                        getPercent(
-                                          v.versions[
-                                            Object.keys(v.versions)[
-                                              Object.keys(v.versions).length - 2
-                                            ]
-                                          ].dist.unpackedSize,
-                                          v.versions[
-                                            Object.keys(v.versions)[
-                                              Object.keys(v.versions).length - 1
-                                            ]
-                                          ].dist.unpackedSize
-                                        )
-                                      ) === 0.0 ? (
-                                        <b> - </b>
-                                      ) : parseFloat(
+                                        {parseFloat(
                                           getPercent(
                                             v.versions[
                                               Object.keys(v.versions)[
@@ -170,30 +168,48 @@ const Home: NextPage = () => {
                                               ]
                                             ].dist.unpackedSize
                                           )
-                                        ) > 0 ? (
-                                        <b className="text-green-400">
-                                          {" "}
-                                          &#8599;{" "}
-                                        </b>
-                                      ) : (
-                                        <b className="text-red-400">
-                                          {" "}
-                                          &#8601;{" "}
-                                        </b>
-                                      )}
-                                    </td>
-                                  </tr>
-                                </Link>
-                              ))
-                            : ""}
-                        </tbody>
-                      </table>
+                                        ) === 0.0 ? (
+                                          <b> - </b>
+                                        ) : parseFloat(
+                                            getPercent(
+                                              v.versions[
+                                                Object.keys(v.versions)[
+                                                  Object.keys(v.versions)
+                                                    .length - 2
+                                                ]
+                                              ].dist.unpackedSize,
+                                              v.versions[
+                                                Object.keys(v.versions)[
+                                                  Object.keys(v.versions)
+                                                    .length - 1
+                                                ]
+                                              ].dist.unpackedSize
+                                            )
+                                          ) > 0 ? (
+                                          <b className="text-red-400">
+                                            {" "}
+                                            &#8599;{" "}
+                                          </b>
+                                        ) : (
+                                          <b className="text-green-400">
+                                            {" "}
+                                            &#8601;{" "}
+                                          </b>
+                                        )}
+                                      </td>
+                                    </tr>
+                                  </Link>
+                                ))
+                              : ""}
+                          </tbody>
+                        </table>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </Layout>

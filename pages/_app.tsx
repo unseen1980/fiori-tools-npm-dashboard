@@ -7,12 +7,10 @@ export const DataContext: any = React.createContext(null);
 
 function MyApp({ Component, pageProps }: AppProps) {
   const [data, setData] = useState();
-  const [isLoading, setLoading] = useState(false);
 
   useEffect(() => {
-    setLoading(true);
     searchNpmRegistry("@sap-ux").then((d) => {
-      //Appending @sap/generator-fiori because is in different org.
+      //Appending @sap modules. Too many to search.
       const data: any = [
         "@sap/generator-fiori",
         ...d,
@@ -23,7 +21,6 @@ function MyApp({ Component, pageProps }: AppProps) {
       });
       Promise.all(data).then((values: any) => {
         setData(values);
-        setLoading(false);
       });
     });
   }, []);
