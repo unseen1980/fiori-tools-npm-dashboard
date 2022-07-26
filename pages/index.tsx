@@ -84,7 +84,7 @@ const Home: NextPage = () => {
               <MainPageCard
                 values={{
                   title: "Number of total downloads in last 30 days",
-                  value: numOfTotalDownloads,
+                  value: numOfTotalDownloads.toLocaleString(),
                 }}
               />
               <div className="col-span-3 ...">
