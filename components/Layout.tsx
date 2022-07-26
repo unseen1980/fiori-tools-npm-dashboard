@@ -7,7 +7,6 @@ import { DataContext } from "../pages/_app";
 
 export default function Layout({ children }: any) {
   const dataContext: any = React.useContext(DataContext);
-  // const autoCompleteData = dataContext.map((d: any) => d.name);
   console.log("dataContext: ", dataContext);
   return (
     <>
@@ -22,13 +21,15 @@ export default function Layout({ children }: any) {
             aria-label="Global"
           >
             <div className="mr-5 lg:mr-0 lg:hidden">
-              <a
-                className="flex-none text-xl font-semibold dark:text-white"
-                href="#"
-                aria-label="Fiori Tools NPM"
-              >
-                Fiori Tools NPM
-              </a>
+              <Link href={{ pathname: "/" }}>
+                <a
+                  className="flex-none text-xl font-semibold dark:text-white"
+                  href="#"
+                  aria-label="Fiori Tools NPM"
+                >
+                  Fiori Tools NPM
+                </a>
+              </Link>
             </div>
 
             <div className="w-full flex items-center justify-end ml-auto sm:justify-between sm:gap-x-3 sm:order-3">
