@@ -4,9 +4,11 @@ import {
   fectNpmPackage,
   bytesToSize,
   downloadCounts,
+  fectNpmPackageByVersion,
 } from "../../helpers/utils";
 import { useEffect, useState } from "react";
 import LineChart from "../../components/LineChart";
+import DonughtChart from "../../components/DonughtChart";
 import moment from "moment";
 
 const Details = () => {
@@ -16,48 +18,171 @@ const Details = () => {
   const [filesNumberChartData, setFilesNumberChartData] = useState();
   const [bundleSizeChartData, setBundleSizeChartData] = useState();
   const [downloadsChartData, setDownloadsChartData] = useState();
+  const [dependenciesChartData, setDependenciesChartData] = useState();
+  const [devDependenciesChartData, setDevDependenciesChartData] = useState();
   const start = moment().subtract("months", 1).toDate(); // start date for lookup
   const end = new Date(); // end date for lookup
 
   useEffect(() => {
-    fectNpmPackage(name).then((d) => {
-      setData(d);
-      console.log("Detailed data for " + name, d);
-      const filesNumberChartData: any = {
-        labels: Object.keys(d.versions),
-        datasets: [
-          {
-            label: "Number of files",
-            data: Object.keys(d.versions).map((ver) => {
-              return d.versions[ver].dist.fileCount;
-            }),
-            borderColor: "rgb(255, 99, 132)",
-            backgroundColor: "rgba(255, 99, 132, 0.5)",
-          },
-        ],
-      };
-      const bundleSizeChartData: any = {
-        labels: Object.keys(d.versions),
-        datasets: [
-          {
-            label: `Bundle size ${bytesToSize(
+    fectNpmPackage(name)
+      .then((d) => {
+        setData(d);
+        console.log("Detailed data for " + name, d);
+        const filesNumberChartData: any = {
+          labels: Object.keys(d.versions),
+          datasets: [
+            {
+              label: "Number of files",
+              data: Object.keys(d.versions).map((ver) => {
+                return d.versions[ver].dist.fileCount;
+              }),
+              borderColor: "rgb(255, 99, 132)",
+              backgroundColor: "rgba(255, 99, 132, 0.5)",
+            },
+          ],
+        };
+        const bundleSizeChartData: any = {
+          labels: Object.keys(d.versions),
+          datasets: [
+            {
+              label: `Bundle size ${bytesToSize(
+                d.versions[
+                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+                ].dist.unpackedSize,
+                2,
+                true
+              ).slice(-2)}`,
+              data: Object.keys(d.versions).map((ver) => {
+                return bytesToSize(d.versions[ver].dist.unpackedSize);
+              }),
+              borderColor: "rgb(255, 99, 132)",
+              backgroundColor: "rgba(255, 99, 132, 0.5)",
+            },
+          ],
+        };
+        setFilesNumberChartData(filesNumberChartData);
+        setBundleSizeChartData(bundleSizeChartData);
+        return d;
+      })
+      .then(async (d) => {
+        const dependenciesChartData: any = {
+          labels: Object.keys(
+            d.versions[
+              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+            ].dependencies
+          ).map(
+            (dep) =>
+              `${dep}@${
+                d.versions[
+                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+                ].dependencies[dep]
+              }`
+          ),
+          datasets: [
+            {
+              label: "Dependencies",
+              data: [],
+              backgroundColor: [
+                "rgba(255, 99, 132, 0.2)",
+                "rgba(54, 162, 235, 0.2)",
+                "rgba(255, 206, 86, 0.2)",
+                "rgba(75, 192, 192, 0.2)",
+                "rgba(153, 102, 255, 0.2)",
+                "rgba(255, 159, 64, 0.2)",
+              ],
+              borderColor: [
+                "rgba(255, 99, 132, 1)",
+                "rgba(54, 162, 235, 1)",
+                "rgba(255, 206, 86, 1)",
+                "rgba(75, 192, 192, 1)",
+                "rgba(153, 102, 255, 1)",
+                "rgba(255, 159, 64, 1)",
+              ],
+              borderWidth: 1,
+            },
+          ],
+        };
+
+        const depsSize = await Promise.all(
+          Object.keys(
+            d.versions[
+              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+            ].dependencies
+          ).map(async (dep) => {
+            const val = await fectNpmPackageByVersion(
+              dep,
               d.versions[
                 Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-              ].dist.unpackedSize,
-              2,
-              true
-            ).slice(-2)}`,
-            data: Object.keys(d.versions).map((ver) => {
-              return bytesToSize(d.versions[ver].dist.unpackedSize);
-            }),
-            borderColor: "rgb(255, 99, 132)",
-            backgroundColor: "rgba(255, 99, 132, 0.5)",
-          },
-        ],
-      };
-      setFilesNumberChartData(filesNumberChartData);
-      setBundleSizeChartData(bundleSizeChartData);
-    });
+              ].dependencies[dep]
+            );
+            let sizeInMB = (val.dist.unpackedSize / (1024 * 1024)).toFixed(2);
+
+            return sizeInMB;
+          })
+        );
+
+        dependenciesChartData.datasets[0].data = depsSize;
+        setDependenciesChartData(dependenciesChartData);
+
+        const devDependenciesChartData: any = {
+          labels: Object.keys(
+            d.versions[
+              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+            ].devDependencies
+          ).map(
+            (dep) =>
+              `${dep}@${
+                d.versions[
+                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+                ].devDependencies[dep]
+              }`
+          ),
+          datasets: [
+            {
+              label: "DevDependencies",
+              data: [],
+              backgroundColor: [
+                "rgba(255, 99, 132, 0.2)",
+                "rgba(54, 162, 235, 0.2)",
+                "rgba(255, 206, 86, 0.2)",
+                "rgba(75, 192, 192, 0.2)",
+                "rgba(153, 102, 255, 0.2)",
+                "rgba(255, 159, 64, 0.2)",
+              ],
+              borderColor: [
+                "rgba(255, 99, 132, 1)",
+                "rgba(54, 162, 235, 1)",
+                "rgba(255, 206, 86, 1)",
+                "rgba(75, 192, 192, 1)",
+                "rgba(153, 102, 255, 1)",
+                "rgba(255, 159, 64, 1)",
+              ],
+              borderWidth: 1,
+            },
+          ],
+        };
+
+        const devDepsSize = await Promise.all(
+          Object.keys(
+            d.versions[
+              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+            ].devDependencies
+          ).map(async (dep) => {
+            const val = await fectNpmPackageByVersion(
+              dep,
+              d.versions[
+                Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+              ].devDependencies[dep]
+            );
+            let sizeInMB = (val.dist.unpackedSize / (1024 * 1024)).toFixed(2);
+
+            return sizeInMB;
+          })
+        );
+
+        devDependenciesChartData.datasets[0].data = devDepsSize;
+        setDevDependenciesChartData(devDependenciesChartData);
+      });
 
     downloadCounts(name as string, start, end).then((downloadsData) => {
       const data: any = {
@@ -121,6 +246,34 @@ const Details = () => {
                   <div className="p-4 md:p-5">
                     {downloadsChartData !== undefined ? (
                       <LineChart data={downloadsChartData} />
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                </div>
+                <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+                  <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                      Dependencies
+                    </p>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    {dependenciesChartData !== undefined ? (
+                      <DonughtChart data={dependenciesChartData} />
+                    ) : (
+                      <></>
+                    )}
+                  </div>
+                </div>
+                <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+                  <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                      Dev Dependencies
+                    </p>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    {devDependenciesChartData !== undefined ? (
+                      <DonughtChart data={devDependenciesChartData} />
                     ) : (
                       <></>
                     )}
