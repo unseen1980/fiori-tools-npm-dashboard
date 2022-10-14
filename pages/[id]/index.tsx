@@ -286,13 +286,15 @@ const Details = () => {
                         <li>
                           Dependencies:{" "}
                           {dependenciesChartData !== undefined
-                            ? dependenciesChartData?.labels?.length
+                            ? //@ts-ignore
+                              dependenciesChartData?.labels?.length
                             : 0}
                         </li>
                         <li>
                           Dev Dependencies:{" "}
                           {devDependenciesChartData !== undefined
-                            ? devDependenciesChartData?.labels?.length
+                            ? //@ts-ignore
+                              devDependenciesChartData?.labels?.length
                             : 0}
                         </li>
                         <li>
