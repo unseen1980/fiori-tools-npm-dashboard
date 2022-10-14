@@ -1,19 +1,29 @@
 export async function fectNpmPackageByVersion(name: any, version: any) {
-  const endpoint = `https://registry.npmjs.org/${name}/${version}`;
-  const res = await fetch(endpoint);
-  const d = await res.json();
-  return d;
+  const fixedVersion = version.replace("^", "").replace("~", "");
+  const endpoint = `https://registry.npmjs.org/${name}/${fixedVersion}`;
+
+  try {
+    const res = await fetch(endpoint);
+    const d = await res.json();
+    return d;
+  } catch (error) {
+    return {};
+  }
 }
 
 export async function fectNpmPackage(name: any) {
   const endpoint = `https://registry.npmjs.org/${name}`;
-  const res = await fetch(endpoint);
-  const data = await res.json();
-  return data;
+  try {
+    const res = await fetch(endpoint);
+    const data = await res.json();
+    return data;
+  } catch (error) {
+    return {};
+  }
 }
 
 export async function searchNpmRegistry(text: any) {
-  const endpoint = `https://registry.npmjs.org/-/v1/search?text=${text}`;
+  const endpoint = `https://registry.npmjs.org/-/v1/search?text=${text}&size=250`;
   const res = await fetch(endpoint);
   const data = await res.json();
   return data.objects.map((d: { package: { name: any } }) => d?.package?.name);

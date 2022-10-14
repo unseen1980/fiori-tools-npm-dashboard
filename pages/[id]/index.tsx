@@ -20,6 +20,9 @@ const Details = () => {
   const [downloadsChartData, setDownloadsChartData] = useState();
   const [dependenciesChartData, setDependenciesChartData] = useState();
   const [devDependenciesChartData, setDevDependenciesChartData] = useState();
+  const [optionalDependencies, setOptionalDevDependencies] = useState();
+  const [peerDependencies, setPeerDependencies] = useState();
+  const [bundledDependencies, setBundledDependencies] = useState();
   const start = moment().subtract("months", 1).toDate(); // start date for lookup
   const end = new Date(); // end date for lookup
 
@@ -65,18 +68,16 @@ const Details = () => {
         return d;
       })
       .then(async (d) => {
+        const dependenciesLatestVersion =
+          d.versions[
+            Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+          ];
+        console.log("Dependencies: ", dependenciesLatestVersion);
+        const dependenciesLatestVersionArray =
+          dependenciesLatestVersion.dependencies || {};
         const dependenciesChartData: any = {
-          labels: Object.keys(
-            d.versions[
-              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-            ].dependencies
-          ).map(
-            (dep) =>
-              `${dep}@${
-                d.versions[
-                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-                ].dependencies[dep]
-              }`
+          labels: Object.keys(dependenciesLatestVersionArray).map(
+            (dep) => `${dep}@${dependenciesLatestVersionArray[dep]}`
           ),
           datasets: [
             {
@@ -104,39 +105,32 @@ const Details = () => {
         };
 
         const depsSize = await Promise.all(
-          Object.keys(
-            d.versions[
-              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-            ].dependencies
-          ).map(async (dep) => {
-            const val = await fectNpmPackageByVersion(
-              dep,
-              d.versions[
-                Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-              ].dependencies[dep]
-            );
-            let sizeInMB = (val.dist.unpackedSize / (1024 * 1024)).toFixed(2);
-
-            return sizeInMB;
+          Object.keys(dependenciesLatestVersionArray).map(async (dep) => {
+            let sizeInMB;
+            if (dep) {
+              const val = await fectNpmPackageByVersion(
+                dep,
+                dependenciesLatestVersionArray[dep]
+              );
+              sizeInMB = (val?.dist?.unpackedSize / (1024 * 1024)).toFixed(2);
+            }
+            return sizeInMB === undefined ? 0 : sizeInMB;
           })
         );
 
         dependenciesChartData.datasets[0].data = depsSize;
         setDependenciesChartData(dependenciesChartData);
 
+        const devDependenciesLatestVersionArray =
+          dependenciesLatestVersion.devDependencies || {};
+
         const devDependenciesChartData: any = {
-          labels: Object.keys(
-            d.versions[
-              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-            ].devDependencies
-          ).map(
-            (dep) =>
-              `${dep}@${
-                d.versions[
-                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-                ].devDependencies[dep]
-              }`
-          ),
+          labels: Object.keys(devDependenciesLatestVersionArray).map((dep) => {
+            if (dep) {
+              return `${dep}@${devDependenciesLatestVersionArray[dep]}`;
+            }
+            return "0";
+          }),
           datasets: [
             {
               label: "DevDependencies",
@@ -163,25 +157,26 @@ const Details = () => {
         };
 
         const devDepsSize = await Promise.all(
-          Object.keys(
-            d.versions[
-              Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-            ].devDependencies
-          ).map(async (dep) => {
-            const val = await fectNpmPackageByVersion(
-              dep,
-              d.versions[
-                Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-              ].devDependencies[dep]
-            );
-            let sizeInMB = (val.dist.unpackedSize / (1024 * 1024)).toFixed(2);
-
-            return sizeInMB;
+          Object.keys(devDependenciesLatestVersionArray).map(async (dep) => {
+            let sizeInMB;
+            if (dep) {
+              const val = await fectNpmPackageByVersion(
+                dep,
+                devDependenciesLatestVersionArray[dep]
+              );
+              sizeInMB = (val?.dist?.unpackedSize / (1024 * 1024)).toFixed(2);
+            }
+            return sizeInMB === undefined ? 0 : sizeInMB;
           })
         );
 
         devDependenciesChartData.datasets[0].data = devDepsSize;
         setDevDependenciesChartData(devDependenciesChartData);
+        setOptionalDevDependencies(
+          dependenciesLatestVersion.optionalDependencies
+        );
+        setPeerDependencies(dependenciesLatestVersion.peerDependencies);
+        setBundledDependencies(dependenciesLatestVersion.bundledDependencies);
       });
 
     downloadCounts(name as string, start, end).then((downloadsData) => {
@@ -279,6 +274,52 @@ const Details = () => {
                     )}
                   </div>
                 </div>
+                <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+                  <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                      Number of dependencies per type
+                    </p>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    <div className="px-4 md:px-5 mt-1 text-sm text-gray-500 dark:text-gray-500 text-lg">
+                      <ul className="list-disc">
+                        <li>
+                          Dependencies:{" "}
+                          {dependenciesChartData !== undefined
+                            ? dependenciesChartData?.labels?.length
+                            : 0}
+                        </li>
+                        <li>
+                          Dev Dependencies:{" "}
+                          {devDependenciesChartData !== undefined
+                            ? devDependenciesChartData?.labels?.length
+                            : 0}
+                        </li>
+                        <li>
+                          Peer Dependencies:{" "}
+                          {peerDependencies &&
+                          Object.keys(peerDependencies).length > 0
+                            ? Object.keys(peerDependencies).length
+                            : "0"}
+                        </li>
+                        <li>
+                          Optional Dependencies:{" "}
+                          {optionalDependencies &&
+                          Object.keys(optionalDependencies).length > 0
+                            ? Object.keys(optionalDependencies).length
+                            : "0"}
+                        </li>
+                        <li>
+                          Bundled Dependencies:{" "}
+                          {bundledDependencies &&
+                          Object.keys(bundledDependencies).length > 0
+                            ? Object.keys(bundledDependencies).length
+                            : "0"}
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
                 <div className="col-span-3 ...">
                   <div className="flex flex-col">
                     <div className="-m-1.5 overflow-x-auto">
@@ -304,19 +345,21 @@ const Details = () => {
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                               {
                                 //@ts-ignore
-                                Object.keys(data.time).map((t, i) => (
-                                  <tr key={i}>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                      {t}
-                                    </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                      {
-                                        //@ts-ignore
-                                        moment(data.time[t]).format("lll")
-                                      }
-                                    </td>
-                                  </tr>
-                                ))
+                                Object.keys(data.time)
+                                  .reverse()
+                                  .map((t, i) => (
+                                    <tr key={i}>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                        {t}
+                                      </td>
+                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                        {
+                                          //@ts-ignore
+                                          moment(data.time[t]).format("lll")
+                                        }
+                                      </td>
+                                    </tr>
+                                  ))
                               }
                             </tbody>
                           </table>
