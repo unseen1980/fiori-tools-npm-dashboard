@@ -160,7 +160,7 @@ const Home: NextPage = () => {
                                                 Object.keys(v.versions).length -
                                                   2
                                               ]
-                                            ].dist.unpackedSize,
+                                            ]?.dist.unpackedSize,
                                             v.versions[
                                               Object.keys(v.versions)[
                                                 Object.keys(v.versions).length -
@@ -177,7 +177,7 @@ const Home: NextPage = () => {
                                                   Object.keys(v.versions)
                                                     .length - 2
                                                 ]
-                                              ].dist.unpackedSize,
+                                              ]?.dist.unpackedSize,
                                               v.versions[
                                                 Object.keys(v.versions)[
                                                   Object.keys(v.versions)
