@@ -2,6 +2,7 @@ import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import React, { useEffect, useState } from "react";
 import { searchNpmRegistry, fectNpmPackage } from "../helpers/utils";
+import { Analytics } from "@vercel/analytics/react";
 
 export const DataContext: any = React.createContext(null);
 
@@ -27,6 +28,7 @@ function MyApp({ Component, pageProps }: AppProps) {
   return (
     <DataContext.Provider value={data}>
       <Component {...pageProps} />
+      <Analytics />
     </DataContext.Provider>
   );
 }
