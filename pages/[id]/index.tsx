@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import LineChart from "../../components/LineChart";
 import DonughtChart from "../../components/DonughtChart";
 import moment from "moment";
+import cmp from "semver-compare";
 
 const Details = () => {
   const router = useRouter();
@@ -26,17 +27,20 @@ const Details = () => {
   const start = moment().subtract("months", 1).toDate(); // start date for lookup
   const end = new Date(); // end date for lookup
 
+  const sortAndSliceVersions = (d: { versions: {} }) =>
+    Object.keys(d.versions).sort(cmp).slice(-30);
+
   useEffect(() => {
     fectNpmPackage(name)
       .then((d) => {
         setData(d);
         console.log("Detailed data for " + name, d);
         const filesNumberChartData: any = {
-          labels: Object.keys(d.versions),
+          labels: sortAndSliceVersions(d),
           datasets: [
             {
               label: "Number of files",
-              data: Object.keys(d.versions).map((ver) => {
+              data: sortAndSliceVersions(d).map((ver) => {
                 return d.versions[ver].dist.fileCount;
               }),
               borderColor: "rgb(255, 99, 132)",
@@ -45,17 +49,17 @@ const Details = () => {
           ],
         };
         const bundleSizeChartData: any = {
-          labels: Object.keys(d.versions),
+          labels: sortAndSliceVersions(d),
           datasets: [
             {
               label: `Bundle size ${bytesToSize(
                 d.versions[
-                  Object.keys(d.versions)[Object.keys(d.versions).length - 1]
+                  sortAndSliceVersions(d)[sortAndSliceVersions(d).length - 1]
                 ].dist.unpackedSize,
                 2,
                 true
               ).slice(-2)}`,
-              data: Object.keys(d.versions).map((ver) => {
+              data: sortAndSliceVersions(d).map((ver) => {
                 return bytesToSize(d.versions[ver].dist.unpackedSize);
               }),
               borderColor: "rgb(255, 99, 132)",
@@ -199,7 +203,7 @@ const Details = () => {
   return (
     <>
       <Layout>
-        <div className="w-full pt-10 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
+        <div className="w-full pt-30 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
           {data !== undefined ? (
             <div className="container mx-auto bg-white">
               <div className="grid grid-cols-3 gap-4">
