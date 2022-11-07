@@ -4,7 +4,10 @@ import Link from "next/link";
 const SideNavListItem = (props: any) => {
   return (
     <li>
-      <Link href={{ pathname: "/" + props.rev, query: { name: props.name } }}>
+      <Link
+        legacyBehavior
+        href={{ pathname: "/" + props.rev, query: { name: props.name } }}
+      >
         <a
           className="flex items-center gap-x-3 py-2 px-2.5 text-xs hover:bg-gray-100 text-slate-700 rounded-md dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"
           href="#"

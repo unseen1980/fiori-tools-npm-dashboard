@@ -125,35 +125,51 @@ const Home: NextPage = () => {
                             {dataContext !== undefined
                               ? //@ts-ignore
                                 dataContext.map((v, i) => (
-                                  <Link
-                                    key={i}
-                                    href={{
-                                      pathname: "/" + v._rev,
-                                      query: { name: v.name },
-                                    }}
-                                  >
-                                    <tr className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                  <tr className="">
+                                    <td className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                      <Link
+                                        key={i}
+                                        href={{
+                                          pathname: "/" + v._rev,
+                                          query: { name: v.name },
+                                        }}
+                                      >
                                         {v.name}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                        {v["dist-tags"].latest}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                        {
-                                          v.versions[v["dist-tags"].latest].dist
-                                            .fileCount
-                                        }
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                        {bytesToSize(
-                                          v.versions[v["dist-tags"].latest].dist
-                                            .unpackedSize,
-                                          2,
-                                          true
-                                        )}
+                                      </Link>
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {v["dist-tags"].latest}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {
+                                        v.versions[v["dist-tags"].latest].dist
+                                          .fileCount
+                                      }
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {bytesToSize(
+                                        v.versions[v["dist-tags"].latest].dist
+                                          .unpackedSize,
+                                        2,
+                                        true
+                                      )}
 
-                                        {parseFloat(
+                                      {parseFloat(
+                                        getPercent(
+                                          v.versions[
+                                            Object.keys(v.versions)[
+                                              Object.keys(v.versions).length - 2
+                                            ]
+                                          ]?.dist.unpackedSize,
+                                          v.versions[
+                                            Object.keys(v.versions)[
+                                              Object.keys(v.versions).length - 1
+                                            ]
+                                          ].dist.unpackedSize
+                                        )
+                                      ) === 0.0 ? (
+                                        <b> - </b>
+                                      ) : parseFloat(
                                           getPercent(
                                             v.versions[
                                               Object.keys(v.versions)[
@@ -168,37 +184,19 @@ const Home: NextPage = () => {
                                               ]
                                             ].dist.unpackedSize
                                           )
-                                        ) === 0.0 ? (
-                                          <b> - </b>
-                                        ) : parseFloat(
-                                            getPercent(
-                                              v.versions[
-                                                Object.keys(v.versions)[
-                                                  Object.keys(v.versions)
-                                                    .length - 2
-                                                ]
-                                              ]?.dist.unpackedSize,
-                                              v.versions[
-                                                Object.keys(v.versions)[
-                                                  Object.keys(v.versions)
-                                                    .length - 1
-                                                ]
-                                              ].dist.unpackedSize
-                                            )
-                                          ) > 0 ? (
-                                          <b className="text-red-400">
-                                            {" "}
-                                            &#8599;{" "}
-                                          </b>
-                                        ) : (
-                                          <b className="text-green-400">
-                                            {" "}
-                                            &#8601;{" "}
-                                          </b>
-                                        )}
-                                      </td>
-                                    </tr>
-                                  </Link>
+                                        ) > 0 ? (
+                                        <b className="text-red-400">
+                                          {" "}
+                                          &#8599;{" "}
+                                        </b>
+                                      ) : (
+                                        <b className="text-green-400">
+                                          {" "}
+                                          &#8601;{" "}
+                                        </b>
+                                      )}
+                                    </td>
+                                  </tr>
                                 ))
                               : ""}
                           </tbody>
