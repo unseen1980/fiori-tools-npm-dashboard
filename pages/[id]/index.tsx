@@ -1,220 +1,98 @@
 import { useRouter } from "next/router";
 import Layout from "../../components/Layout";
-import {
-  fectNpmPackage,
-  bytesToSize,
-  downloadCounts,
-  fectNpmPackageByVersion,
-} from "../../helpers/utils";
-import { useEffect, useState } from "react";
+import { useNpmData } from "../../hooks/useNpmData";
+import { useChartData } from "../../hooks/useChartData";
 import LineChart from "../../components/LineChart";
 import DonughtChart from "../../components/DonughtChart";
 import moment from "moment";
-import cmp from "semver-compare";
 
 const Details = () => {
   const router = useRouter();
   const { name } = router.query;
-  const [data, setData] = useState();
-  const [filesNumberChartData, setFilesNumberChartData] = useState();
-  const [bundleSizeChartData, setBundleSizeChartData] = useState();
-  const [downloadsChartData, setDownloadsChartData] = useState();
-  const [dependenciesChartData, setDependenciesChartData] = useState();
-  const [devDependenciesChartData, setDevDependenciesChartData] = useState();
-  const [optionalDependencies, setOptionalDevDependencies] = useState();
-  const [peerDependencies, setPeerDependencies] = useState();
-  const [bundledDependencies, setBundledDependencies] = useState();
-  const start = moment().subtract("months", 1).toDate(); // start date for lookup
-  const end = new Date(); // end date for lookup
+  const packageName = typeof name === 'string' ? name : undefined;
+  
+  const { data, isLoading, error } = useNpmData(packageName);
+  const chartData = useChartData(data);
 
-  const sortAndSliceVersions = (d: { versions: {} }) =>
-    Object.keys(d.versions).sort(cmp).slice(-30);
+  if (error) {
+    return (
+      <Layout>
+        <div className="w-full pt-30 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert">
+            <strong className="font-bold">Error!</strong>
+            <span className="block sm:inline"> {error}</span>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
-  useEffect(() => {
-    fectNpmPackage(name)
-      .then((d) => {
-        setData(d);
-        console.log("Detailed data for " + name, d);
-        const filesNumberChartData: any = {
-          labels: sortAndSliceVersions(d),
-          datasets: [
-            {
-              label: "Number of files",
-              data: sortAndSliceVersions(d).map((ver) => {
-                return d.versions[ver].dist.fileCount;
-              }),
-              borderColor: "rgb(255, 99, 132)",
-              backgroundColor: "rgba(255, 99, 132, 0.5)",
-            },
-          ],
-        };
-        const bundleSizeChartData: any = {
-          labels: sortAndSliceVersions(d),
-          datasets: [
-            {
-              label: `Bundle size ${bytesToSize(
-                d.versions[
-                  sortAndSliceVersions(d)[sortAndSliceVersions(d).length - 1]
-                ].dist.unpackedSize,
-                2,
-                true
-              ).slice(-2)}`,
-              data: sortAndSliceVersions(d).map((ver) => {
-                return bytesToSize(d.versions[ver].dist.unpackedSize);
-              }),
-              borderColor: "rgb(255, 99, 132)",
-              backgroundColor: "rgba(255, 99, 132, 0.5)",
-            },
-          ],
-        };
-        setFilesNumberChartData(filesNumberChartData);
-        setBundleSizeChartData(bundleSizeChartData);
-        return d;
-      })
-      .then(async (d) => {
-        const dependenciesLatestVersion =
-          d.versions[
-            Object.keys(d.versions)[Object.keys(d.versions).length - 1]
-          ];
-        console.log("Dependencies: ", dependenciesLatestVersion);
-        const dependenciesLatestVersionArray =
-          dependenciesLatestVersion.dependencies || {};
-        const dependenciesChartData: any = {
-          labels: Object.keys(dependenciesLatestVersionArray).map(
-            (dep) => `${dep}@${dependenciesLatestVersionArray[dep]}`
-          ),
-          datasets: [
-            {
-              label: "Dependencies",
-              data: [],
-              backgroundColor: [
-                "rgba(255, 99, 132, 0.2)",
-                "rgba(54, 162, 235, 0.2)",
-                "rgba(255, 206, 86, 0.2)",
-                "rgba(75, 192, 192, 0.2)",
-                "rgba(153, 102, 255, 0.2)",
-                "rgba(255, 159, 64, 0.2)",
-              ],
-              borderColor: [
-                "rgba(255, 99, 132, 1)",
-                "rgba(54, 162, 235, 1)",
-                "rgba(255, 206, 86, 1)",
-                "rgba(75, 192, 192, 1)",
-                "rgba(153, 102, 255, 1)",
-                "rgba(255, 159, 64, 1)",
-              ],
-              borderWidth: 1,
-            },
-          ],
-        };
-
-        const depsSize = await Promise.all(
-          Object.keys(dependenciesLatestVersionArray).map(async (dep) => {
-            let sizeInMB;
-            if (dep) {
-              const val = await fectNpmPackageByVersion(
-                dep,
-                dependenciesLatestVersionArray[dep]
-              );
-              sizeInMB = (val?.dist?.unpackedSize / (1024 * 1024)).toFixed(2);
-            }
-            return sizeInMB === undefined ? 0 : sizeInMB;
-          })
-        );
-
-        dependenciesChartData.datasets[0].data = depsSize;
-        setDependenciesChartData(dependenciesChartData);
-
-        const devDependenciesLatestVersionArray =
-          dependenciesLatestVersion.devDependencies || {};
-
-        const devDependenciesChartData: any = {
-          labels: Object.keys(devDependenciesLatestVersionArray).map((dep) => {
-            if (dep) {
-              return `${dep}@${devDependenciesLatestVersionArray[dep]}`;
-            }
-            return "0";
-          }),
-          datasets: [
-            {
-              label: "DevDependencies",
-              data: [],
-              backgroundColor: [
-                "rgba(255, 99, 132, 0.2)",
-                "rgba(54, 162, 235, 0.2)",
-                "rgba(255, 206, 86, 0.2)",
-                "rgba(75, 192, 192, 0.2)",
-                "rgba(153, 102, 255, 0.2)",
-                "rgba(255, 159, 64, 0.2)",
-              ],
-              borderColor: [
-                "rgba(255, 99, 132, 1)",
-                "rgba(54, 162, 235, 1)",
-                "rgba(255, 206, 86, 1)",
-                "rgba(75, 192, 192, 1)",
-                "rgba(153, 102, 255, 1)",
-                "rgba(255, 159, 64, 1)",
-              ],
-              borderWidth: 1,
-            },
-          ],
-        };
-
-        const devDepsSize = await Promise.all(
-          Object.keys(devDependenciesLatestVersionArray).map(async (dep) => {
-            let sizeInMB;
-            if (dep) {
-              const val = await fectNpmPackageByVersion(
-                dep,
-                devDependenciesLatestVersionArray[dep]
-              );
-              sizeInMB = (val?.dist?.unpackedSize / (1024 * 1024)).toFixed(2);
-            }
-            return sizeInMB === undefined ? 0 : sizeInMB;
-          })
-        );
-
-        devDependenciesChartData.datasets[0].data = devDepsSize;
-        setDevDependenciesChartData(devDependenciesChartData);
-        setOptionalDevDependencies(
-          dependenciesLatestVersion.optionalDependencies
-        );
-        setPeerDependencies(dependenciesLatestVersion.peerDependencies);
-        setBundledDependencies(dependenciesLatestVersion.bundledDependencies);
-      });
-
-    downloadCounts(name as string, start, end).then((downloadsData) => {
-      const data: any = {
-        labels: downloadsData.map((d: any) => d.day),
-        datasets: [
-          {
-            label: "Daily downloads",
-            data: downloadsData.map((d: any) => d.downloads),
-            borderColor: "rgb(255, 99, 132)",
-            backgroundColor: "rgba(255, 99, 132, 0.5)",
-          },
-        ],
-      };
-
-      setDownloadsChartData(data);
-    });
-  }, [name]);
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="w-full pt-30 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
+          <div className="grid grid-cols-1 place-items-center">
+            <div
+              className="animate-spin inline-block w-8 h-8 border-[3px] border-current border-t-transparent text-blue-600 rounded-full"
+              role="status"
+              aria-label="loading"
+            >
+              <span className="sr-only">Loading...</span>
+            </div>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <>
       <Layout>
         <div className="w-full pt-30 px-4 sm:px-6 md:px-8 lg:pl-72 bg-white">
-          {data !== undefined ? (
+          {data ? (
             <div className="container mx-auto bg-white">
               <div className="grid grid-cols-3 gap-4">
-                <div className="col-span-3 ...">
-                  <h3 className="text-lg font-bold text-gray-800">{name}</h3>
-                  <h3 className="text-lg font-bold text-gray-800">
-                    {
-                      //@ts-ignore
-                      data.description
-                    }
-                  </h3>
+                <div className="col-span-3 mb-6">
+                  <div className="bg-white border shadow-sm rounded-xl p-6 dark:bg-gray-800 dark:border-gray-700">
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{data.name}</h1>
+                    <p className="text-lg text-gray-600 dark:text-gray-300 mb-4">
+                      {data.description || 'No description available'}
+                    </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-500">Latest Version:</span>
+                        <p className="text-gray-900 dark:text-white">{data['dist-tags'].latest}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-500">License:</span>
+                        <p className="text-gray-900 dark:text-white">{data.versions[data['dist-tags'].latest]?.license || 'Not specified'}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-500">Homepage:</span>
+                        <p className="text-gray-900 dark:text-white">
+                          {data.versions[data['dist-tags'].latest]?.homepage ? (
+                            <a href={data.versions[data['dist-tags'].latest].homepage} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              View
+                            </a>
+                          ) : (
+                            'Not available'
+                          )}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-500">Repository:</span>
+                        <p className="text-gray-900 dark:text-white">
+                          {data.versions[data['dist-tags'].latest]?.repository?.url ? (
+                            <a href={data.versions[data['dist-tags'].latest]?.repository?.url?.replace('git+', '').replace('.git', '') || ''} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                              View
+                            </a>
+                          ) : (
+                            'Not available'
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
                   <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
@@ -223,7 +101,11 @@ const Details = () => {
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    <LineChart data={bundleSizeChartData} />
+                    {chartData.bundleSize ? (
+                      <LineChart data={chartData.bundleSize} />
+                    ) : (
+                      <div className="text-center text-gray-500">Loading chart...</div>
+                    )}
                   </div>
                 </div>
                 <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
@@ -233,7 +115,11 @@ const Details = () => {
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    <LineChart data={filesNumberChartData} />
+                    {chartData.filesNumber ? (
+                      <LineChart data={chartData.filesNumber} />
+                    ) : (
+                      <div className="text-center text-gray-500">Loading chart...</div>
+                    )}
                   </div>
                 </div>
                 <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
@@ -243,10 +129,10 @@ const Details = () => {
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    {downloadsChartData !== undefined ? (
-                      <LineChart data={downloadsChartData} />
+                    {chartData.downloads ? (
+                      <LineChart data={chartData.downloads} />
                     ) : (
-                      <></>
+                      <div className="text-center text-gray-500">Loading chart...</div>
                     )}
                   </div>
                 </div>
@@ -257,10 +143,10 @@ const Details = () => {
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    {dependenciesChartData !== undefined ? (
-                      <DonughtChart data={dependenciesChartData} />
+                    {chartData.dependencies?.dependencies ? (
+                      <DonughtChart data={chartData.dependencies.dependencies} />
                     ) : (
-                      <></>
+                      <div className="text-center text-gray-500">No dependencies</div>
                     )}
                   </div>
                 </div>
@@ -271,104 +157,175 @@ const Details = () => {
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    {devDependenciesChartData !== undefined ? (
-                      <DonughtChart data={devDependenciesChartData} />
+                    {chartData.dependencies?.devDependencies ? (
+                      <DonughtChart data={chartData.dependencies.devDependencies} />
                     ) : (
-                      <></>
+                      <div className="text-center text-gray-500">No dev dependencies</div>
                     )}
                   </div>
                 </div>
                 <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
                   <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
-                      Number of dependencies per type
+                      Dependencies Summary
                     </p>
                   </div>
                   <div className="p-4 md:p-5">
-                    <div className="px-4 md:px-5 mt-1 text-sm text-gray-500 dark:text-gray-500 text-lg">
-                      <ul className="list-disc">
-                        <li>
-                          Dependencies:{" "}
-                          {dependenciesChartData !== undefined
-                            ? //@ts-ignore
-                              dependenciesChartData?.labels?.length
-                            : 0}
-                        </li>
-                        <li>
-                          Dev Dependencies:{" "}
-                          {devDependenciesChartData !== undefined
-                            ? //@ts-ignore
-                              devDependenciesChartData?.labels?.length
-                            : 0}
-                        </li>
-                        <li>
-                          Peer Dependencies:{" "}
-                          {peerDependencies &&
-                          Object.keys(peerDependencies).length > 0
-                            ? Object.keys(peerDependencies).length
-                            : "0"}
-                        </li>
-                        <li>
-                          Optional Dependencies:{" "}
-                          {optionalDependencies &&
-                          Object.keys(optionalDependencies).length > 0
-                            ? Object.keys(optionalDependencies).length
-                            : "0"}
-                        </li>
-                        <li>
-                          Bundled Dependencies:{" "}
-                          {bundledDependencies &&
-                          Object.keys(bundledDependencies).length > 0
-                            ? Object.keys(bundledDependencies).length
-                            : "0"}
-                        </li>
-                      </ul>
+                    <div className="space-y-3 text-sm">
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Dependencies:</span>
+                        <span className="font-medium">{chartData.dependencies?.dependencies?.labels?.length || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Dev Dependencies:</span>
+                        <span className="font-medium">{chartData.dependencies?.devDependencies?.labels?.length || 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Peer Dependencies:</span>
+                        <span className="font-medium">{chartData.dependencies?.peerDependencies ? Object.keys(chartData.dependencies.peerDependencies).length : 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Optional:</span>
+                        <span className="font-medium">{chartData.dependencies?.optionalDependencies ? Object.keys(chartData.dependencies.optionalDependencies).length : 0}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-gray-600 dark:text-gray-400">Bundled:</span>
+                        <span className="font-medium">{chartData.dependencies?.bundledDependencies?.length || 0}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="col-span-3 ...">
-                  <div className="flex flex-col">
-                    <div className="-m-1.5 overflow-x-auto">
-                      <div className="p-1.5 min-w-full inline-block align-middle">
-                        <div className="overflow-hidden">
-                          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 dark:bg-gray-800 dark:border-gray-700 rounded-xl dark:shadow-slate-700/[.7]">
-                            <thead>
-                              <tr>
-                                <th
-                                  scope="col"
-                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                  Version
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
-                                >
-                                  Release date
-                                </th>
-                              </tr>
-                            </thead>
+                <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+                  <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                      Package Info
+                    </p>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    <div className="space-y-3 text-sm">
+                      <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Maintainers:</span>
+                        <div className="mt-1">
+                          {data.maintainers && data.maintainers.length > 0 ? (
+                            data.maintainers.slice(0, 3).map((maintainer: any, index: number) => (
+                              <div key={index} className="text-gray-900 dark:text-white">
+                                {maintainer.name || maintainer.email}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-gray-500">Not available</span>
+                          )}
+                          {data.maintainers && data.maintainers.length > 3 && (
+                            <div className="text-gray-500">+{data.maintainers.length - 3} more</div>
+                          )}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-400">Keywords:</span>
+                        <div className="mt-1 flex flex-wrap gap-1">
+                          {data.versions[data['dist-tags'].latest]?.keywords?.slice(0, 5).map((keyword: string, index: number) => (
+                            <span key={index} className="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded">
+                              {keyword}
+                            </span>
+                          )) || <span className="text-gray-500">None</span>}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-400">NPM Link:</span>
+                        <div className="mt-1">
+                          <a 
+                            href={`https://www.npmjs.com/package/${data.name}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                          >
+                            View on NPM
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="xs:col-span-3 md:col-span-1 flex flex-col bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700 dark:shadow-slate-700/[.7]">
+                  <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-500">
+                      Installation
+                    </p>
+                  </div>
+                  <div className="p-4 md:p-5">
+                    <div className="space-y-3">
+                      <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-400 text-sm">NPM:</span>
+                        <div className="mt-1 bg-gray-100 dark:bg-gray-700 p-2 rounded text-sm font-mono">
+                          npm install {data.name}
+                        </div>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-600 dark:text-gray-400 text-sm">Yarn:</span>
+                        <div className="mt-1 bg-gray-100 dark:bg-gray-700 p-2 rounded text-sm font-mono">
+                          yarn add {data.name}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="col-span-3">
+                  <div className="bg-white border shadow-sm rounded-xl dark:bg-gray-800 dark:border-gray-700">
+                    <div className="bg-gray-100 border-b rounded-t-xl py-3 px-4 md:py-4 md:px-5 dark:bg-gray-800 dark:border-gray-700">
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Version History (Last 20)</h3>
+                    </div>
+                    <div className="flex flex-col">
+                      <div className="-m-1.5 overflow-x-auto">
+                        <div className="p-1.5 min-w-full inline-block align-middle">
+                          <div className="overflow-hidden">
+                            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                              <thead className="bg-gray-50 dark:bg-gray-700">
+                                <tr>
+                                  <th
+                                    scope="col"
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                  >
+                                    Version
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                  >
+                                    Release date
+                                  </th>
+                                  <th
+                                    scope="col"
+                                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                  >
+                                    Size
+                                  </th>
+                                </tr>
+                              </thead>
                             <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
-                              {
-                                //@ts-ignore
-                                Object.keys(data.time)
-                                  .reverse()
-                                  .map((t, i) => (
-                                    <tr key={i}>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                        {t}
-                                      </td>
-                                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                        {
-                                          //@ts-ignore
-                                          moment(data.time[t]).format("lll")
-                                        }
-                                      </td>
-                                    </tr>
-                                  ))
+                              {data.time && Object.keys(data.time)
+                                .filter(t => t !== 'created' && t !== 'modified')
+                                .reverse()
+                                .slice(0, 20)
+                                .map((version, i) => (
+                                  <tr key={version} className="hover:bg-gray-100 dark:hover:bg-gray-700">
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
+                                      {version}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {moment(data.time[version]).format("lll")}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {data.versions[version]?.dist?.unpackedSize ? 
+                                        `${(data.versions[version].dist.unpackedSize / (1024 * 1024)).toFixed(2)} MB` : 
+                                        'N/A'
+                                      }
+                                    </td>
+                                  </tr>
+                                ))
                               }
                             </tbody>
                           </table>
+                          </div>
                         </div>
                       </div>
                     </div>

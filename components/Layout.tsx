@@ -1,13 +1,25 @@
 import Head from "next/head";
 import SideNavListItem from "./SideNavListItem";
 import AutoComplete from "./AutoComplete";
-import React from "react";
+import React, { useMemo } from "react";
 import Link from "next/link";
 import { DataContext } from "../pages/_app";
 
-export default function Layout({ children }: any) {
-  const dataContext: any = React.useContext(DataContext);
-  console.log("dataContext: ", dataContext);
+interface LayoutProps {
+  children: React.ReactNode;
+}
+
+export default function Layout({ children }: LayoutProps) {
+  const context = React.useContext(DataContext);
+  const dataContext = context?.data;
+  
+  const autoCompleteData = useMemo(() => {
+    if (!dataContext) return [];
+    return dataContext.map((d) => ({
+      name: d.name,
+      pathname: d._rev,
+    }));
+  }, [dataContext]);
   return (
     <>
       <Head>
@@ -70,12 +82,7 @@ export default function Layout({ children }: any) {
                       </svg>
                     </div>
 
-                    <AutoComplete
-                      data={dataContext.map((d: any) => ({
-                        name: d.name,
-                        pathname: d._rev,
-                      }))}
-                    />
+                    <AutoComplete data={autoCompleteData} />
                   </div>
                 </div>
               )}
@@ -100,14 +107,13 @@ export default function Layout({ children }: any) {
 
           <nav className="p-6 w-full flex flex-col flex-wrap">
             <ul className="space-y-1.5">
-              {dataContext &&
-                dataContext.map((npmModule: any) => (
-                  <SideNavListItem
-                    name={npmModule.name}
-                    rev={npmModule._rev}
-                    key={npmModule.name}
-                  />
-                ))}
+              {dataContext?.map((npmModule) => (
+                <SideNavListItem
+                  name={npmModule.name}
+                  rev={npmModule._rev}
+                  key={npmModule._id}
+                />
+              ))}
             </ul>
           </nav>
         </div>
