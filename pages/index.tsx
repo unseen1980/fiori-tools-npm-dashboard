@@ -1,11 +1,11 @@
 import type { NextPage } from "next";
-import { useEffect, useState, useContext, useMemo, useRef } from "react";
+import { useEffect, useState, useContext, useMemo } from "react";
 import MainPageCard from "../components/MainPageCard";
 import Layout from "../components/Layout";
 import { DataContext } from "./_app";
-import { downloadCounts, bytesToSize, getPercent } from "../helpers/utils";
-import Link from "next/link";
-import moment from "moment";
+import { bytesToSize, getPercent } from "../helpers/utils";
+import { useRouter } from "next/router";
+import cmp from "semver-compare";
 
 interface HomeProps {
   isLoading?: boolean;
@@ -14,108 +14,71 @@ interface HomeProps {
 const Home: NextPage<HomeProps> = () => {
   const [isLoading, setLoading] = useState(false);
   const context = useContext(DataContext);
+  const router = useRouter();
   const [mainPageCardDataSap, setMainPageCardsDataSap] = useState<number>(0);
   const [mainPageCardDataSapUx, setMainPageCardsDataSapUx] = useState<number>(0);
-  const [numOfTotalDownloads, setNumOfTotalDownloads] = useState(0);
+  const [totalDownloads, setTotalDownloads] = useState<number | null>(null);
+  const [downloadsFetched, setDownloadsFetched] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'version' | 'size'>('name');
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  
+
   const dataContext = context?.data;
   const appLoading = context?.isLoading || false;
   const refresh = context?.refresh;
-  const downloadsFetched = useRef(false);
-  
-  const dateRange = useMemo(() => ({
-    start: moment().subtract(1, "months").toDate(),
-    end: new Date()
-  }), []);
 
   useEffect(() => {
     if (dataContext && dataContext.length > 0) {
       const sapModules = dataContext.filter(m => m.name.startsWith("@sap/"));
       const sapUxModules = dataContext.filter(m => m.name.startsWith("@sap-ux/"));
-      
+
       setMainPageCardsDataSap(sapModules.length);
       setMainPageCardsDataSapUx(sapUxModules.length);
-      
-      // Only fetch downloads once to avoid excessive API calls
-      if (!downloadsFetched.current) {
-        setLoading(true);
-        downloadsFetched.current = true;
-        
-        const fetchTotalDownloads = async (promises: Promise<any[]>[]) => {
-          try {
-            // Process in batches of 10 to avoid overwhelming the API
-            const batchSize = 10;
-            let totalNum = 0;
-            setDownloadProgress(0);
-            
-            for (let i = 0; i < promises.length; i += batchSize) {
-              const batch = promises.slice(i, i + batchSize);
-              const results = await Promise.allSettled(batch);
-              
-              const batchTotal = results
-                .filter((result): result is PromiseFulfilledResult<any[]> => 
-                  result.status === 'fulfilled' && Array.isArray(result.value)
-                )
-                .map(result => 
-                  result.value
-                    .map((d: any) => d.downloads || 0)
-                    .reduce((a, b) => a + b, 0)
-                )
-                .reduce((a, b) => a + b, 0);
-              
-              totalNum += batchTotal;
-              
-              // Update the display progressively
-              setNumOfTotalDownloads(totalNum);
-              setDownloadProgress(Math.min(100, ((i + batchSize) / promises.length) * 100));
-              
-              // Small delay between batches to be nice to the API
-              if (i + batchSize < promises.length) {
-                await new Promise(resolve => setTimeout(resolve, 100));
-              }
-            }
-            setDownloadProgress(100);
-          } catch (error) {
-            console.error('Error fetching total downloads:', error);
-            setDownloadProgress(100);
-          }
-        };
-        
-        // Fetch downloads for all packages but with proper batching
-        const downloadPromises = dataContext.map(m => 
-          downloadCounts(m.name, dateRange.start, dateRange.end)
-        );
-        
-        fetchTotalDownloads(downloadPromises).finally(() => {
-          setLoading(false);
-        });
+
+      // Fetch total downloads using bulk API (efficient - uses 4-5 requests instead of 90+)
+      if (!downloadsFetched) {
+        setDownloadsFetched(true);
+        const packageNames = dataContext.map(m => m.name);
+
+        fetch('/api/bulk-downloads', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ packages: packageNames })
+        })
+          .then(res => res.json())
+          .then(data => {
+            setTotalDownloads(data.total || 0);
+          })
+          .catch(err => {
+            console.error('Error fetching bulk downloads:', err);
+            setTotalDownloads(0);
+          })
+          .finally(() => setLoading(false));
+      } else {
+        setLoading(false);
       }
     }
-  }, [dataContext, dateRange]);
-  
+  }, [dataContext, downloadsFetched]);
+
   const filteredAndSortedData = useMemo(() => {
     if (!dataContext) return [];
-    
+
     let filtered = dataContext;
-    
+
     // Apply search filter
     if (searchTerm) {
-      filtered = filtered.filter(pkg => 
+      filtered = filtered.filter(pkg =>
         pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         pkg.description?.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
-    
+
     // Apply sorting
     const sorted = [...filtered].sort((a, b) => {
       switch (sortBy) {
         case 'name':
           return a.name.localeCompare(b.name);
         case 'version':
-          return a['dist-tags'].latest.localeCompare(b['dist-tags'].latest);
+          return cmp(a['dist-tags'].latest, b['dist-tags'].latest);
         case 'size':
           const sizeA = a.versions[a['dist-tags'].latest]?.dist?.unpackedSize || 0;
           const sizeB = b.versions[b['dist-tags'].latest]?.dist?.unpackedSize || 0;
@@ -124,7 +87,7 @@ const Home: NextPage<HomeProps> = () => {
           return 0;
       }
     });
-    
+
     return sorted;
   }, [dataContext, searchTerm, sortBy]);
 
@@ -159,8 +122,19 @@ const Home: NextPage<HomeProps> = () => {
               />
               <MainPageCard
                 values={{
-                  title: downloadProgress < 100 ? `Loading downloads... ${Math.round(downloadProgress)}%` : "Total downloads in last 30 days",
-                  value: numOfTotalDownloads.toLocaleString(),
+                  title: "Total downloads in last 30 days",
+                  value: totalDownloads === null ? (
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="flex items-center gap-2">
+                        <div className="animate-spin h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full"></div>
+                        <span className="text-sm text-gray-500">Fetching data...</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
+                        <div className="bg-blue-500 h-1.5 rounded-full animate-pulse" style={{ width: '60%' }}></div>
+                      </div>
+                      <span className="text-xs text-gray-400">Please wait, this may take a minute</span>
+                    </div>
+                  ) : totalDownloads.toLocaleString(),
                 }}
               />
               <div className="col-span-3">
@@ -185,9 +159,8 @@ const Home: NextPage<HomeProps> = () => {
                   </div>
                   <button
                     onClick={() => {
-                      downloadsFetched.current = false;
-                      setDownloadProgress(0);
-                      setNumOfTotalDownloads(0);
+                      setDownloadsFetched(false);
+                      setTotalDownloads(null);
                       refresh?.();
                     }}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -206,25 +179,25 @@ const Home: NextPage<HomeProps> = () => {
                             <tr>
                               <th
                                 scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                className="w-1/2 px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                               >
                                 Module name
                               </th>
                               <th
                                 scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                className="w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                               >
                                 Version
                               </th>
                               <th
                                 scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                className="w-[140px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                               >
                                 Number of files
                               </th>
                               <th
                                 scope="col"
-                                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
+                                className="w-[120px] px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase"
                               >
                                 Filesize
                               </th>
@@ -239,52 +212,52 @@ const Home: NextPage<HomeProps> = () => {
                               </tr>
                             ) : (
                               filteredAndSortedData.map((v) => {
-                              const latestVersion = v.versions[v["dist-tags"].latest];
-                              const currentSize = latestVersion?.dist?.unpackedSize || 0;
-                              const sizeDisplay = bytesToSize(currentSize, 2, true);
-                              
-                              const versionKeys = Object.keys(v.versions);
-                              let changeIndicator = <b> - </b>;
-                              
-                              if (versionKeys.length >= 2) {
-                                const previousVersion = v.versions[versionKeys[versionKeys.length - 2]];
-                                const previousSize = previousVersion?.dist?.unpackedSize || 0;
-                                
-                                if (previousSize > 0) {
-                                  const percentChange = parseFloat(getPercent(previousSize, currentSize));
-                                  
-                                  if (percentChange > 0) {
-                                    changeIndicator = <b className="text-red-400"> ↗ </b>;
-                                  } else if (percentChange < 0) {
-                                    changeIndicator = <b className="text-green-400"> ↘ </b>;
+                                const latestVersion = v.versions[v["dist-tags"].latest];
+                                const currentSize = latestVersion?.dist?.unpackedSize || 0;
+                                const sizeDisplay = bytesToSize(currentSize, 2, true);
+
+                                const versionKeys = Object.keys(v.versions);
+                                let changeIndicator = <b> - </b>;
+
+                                if (versionKeys.length >= 2) {
+                                  const previousVersion = v.versions[versionKeys[versionKeys.length - 2]];
+                                  const previousSize = previousVersion?.dist?.unpackedSize || 0;
+
+                                  if (previousSize > 0) {
+                                    const percentChange = parseFloat(getPercent(previousSize, currentSize));
+
+                                    if (percentChange > 0) {
+                                      changeIndicator = <b className="text-red-400"> ↗ </b>;
+                                    } else if (percentChange < 0) {
+                                      changeIndicator = <b className="text-green-400"> ↘ </b>;
+                                    }
                                   }
                                 }
-                              }
 
-                              return (
-                                <tr key={v._id} className="hover:bg-gray-100 dark:hover:bg-gray-700">
-                                  <td className="cursor-pointer px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-800 dark:text-gray-200">
-                                    <Link
-                                      href={{
-                                        pathname: "/" + v._rev,
-                                        query: { name: v.name },
-                                      }}
-                                    >
+                                return (
+                                  <tr
+                                    key={v._id}
+                                    className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
+                                    onClick={() => router.push({
+                                      pathname: "/" + v._rev,
+                                      query: { name: v.name },
+                                    })}
+                                  >
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-800 dark:text-gray-200">
                                       {v.name}
-                                    </Link>
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {v["dist-tags"].latest}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {latestVersion?.dist?.fileCount || 'N/A'}
-                                  </td>
-                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
-                                    {sizeDisplay} {changeIndicator}
-                                  </td>
-                                </tr>
-                              );
-                            })
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {v["dist-tags"].latest}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {latestVersion?.dist?.fileCount || 'N/A'}
+                                    </td>
+                                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-800 dark:text-gray-200">
+                                      {sizeDisplay} {changeIndicator}
+                                    </td>
+                                  </tr>
+                                );
+                              })
                             )}
                           </tbody>
                         </table>

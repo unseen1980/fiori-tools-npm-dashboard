@@ -1,7 +1,7 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import React, { useEffect, useState } from "react";
-import { searchNpmRegistry, fectNpmPackage } from "../helpers/utils";
+import { searchNpmRegistry, fetchNpmPackage } from "../helpers/utils";
 import { requestCache } from "../helpers/requestCache";
 import { Analytics } from "@vercel/analytics/react";
 import { NpmPackage } from "../types";
@@ -25,22 +25,22 @@ function MyApp({ Component, pageProps }: AppProps) {
     try {
       setIsLoading(true);
       setError(null);
-      
+
       // Search for @sap-ux packages and add specific @sap packages
       const sapUxResults = await searchNpmRegistry("@sap-ux");
-      
+
       // Only the specific @sap packages you originally had
       const specificSapModules = [
         "@sap/generator-fiori",
-        "@sap/ux-ui5-tooling", 
+        "@sap/ux-ui5-tooling",
         "@sap/ux-specification",
       ];
-      
+
       const allModules = Array.from(new Set([...specificSapModules, ...sapUxResults]));
-      
-      const packagePromises = allModules.map(npmModule => fectNpmPackage(npmModule));
+
+      const packagePromises = allModules.map(npmModule => fetchNpmPackage(npmModule));
       const packages = await Promise.all(packagePromises);
-      
+
       const validPackages = packages.filter(pkg => pkg && pkg.name);
       setData(validPackages);
     } catch (err) {

@@ -1,3 +1,5 @@
+import React from 'react';
+
 export interface NpmPackage {
   _id: string;
   _rev: string;
@@ -58,5 +60,5 @@ export interface ChartData {
 
 export interface MainPageCardData {
   title: string;
-  value: string | number | undefined;
+  value: string | number | React.ReactNode | undefined;
 }

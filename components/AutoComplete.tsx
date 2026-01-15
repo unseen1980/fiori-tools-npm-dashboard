@@ -1,8 +1,17 @@
 import { useState } from "react";
 import Link from "next/link";
 
-const AutoComplete = ({ data }: any) => {
-  const [suggestions, setSuggestions] = useState([]);
+interface AutoCompleteItem {
+  name: string;
+  pathname: string;
+}
+
+interface AutoCompleteProps {
+  data: AutoCompleteItem[];
+}
+
+const AutoComplete = ({ data }: AutoCompleteProps) => {
+  const [suggestions, setSuggestions] = useState<AutoCompleteItem[]>([]);
   const [suggestionsActive, setSuggestionsActive] = useState(false);
   const [value, setValue] = useState("");
 
@@ -11,7 +20,7 @@ const AutoComplete = ({ data }: any) => {
     setValue(query);
     if (query.length > 1) {
       const filterSuggestions = data.filter(
-        (suggestion: any) => suggestion.name.toLowerCase().indexOf(query) > -1
+        (suggestion) => suggestion.name.toLowerCase().indexOf(query) > -1
       );
       setSuggestions(filterSuggestions);
       setSuggestionsActive(true);
@@ -23,26 +32,23 @@ const AutoComplete = ({ data }: any) => {
   const Suggestions = () => {
     return (
       <ul className="max-w-xs flex flex-col fixed">
-        {suggestions.map(
-          (suggestion: { name: string; _rev: string }, index) => {
-            return (
-              <Link
-                href={{
-                  pathname: "/" + suggestion._rev,
-                  query: { name: suggestion.name },
-                }}
-                key={index}
+        {suggestions.map((suggestion, index) => {
+          return (
+            <Link
+              href={{
+                pathname: "/" + suggestion.pathname,
+                query: { name: suggestion.name },
+              }}
+              key={`${suggestion.name}-${index}`}
+            >
+              <li
+                className=" cursor-pointer inline-flex items-center gap-x-2 py-3 px-4 text-sm font-medium bg-white border text-gray-800 -mt-px first:rounded-t-lg first:mt-0 last:rounded-b-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
               >
-                <li
-                  className=" cursor-pointer inline-flex items-center gap-x-2 py-3 px-4 text-sm font-medium bg-white border text-gray-800 -mt-px first:rounded-t-lg first:mt-0 last:rounded-b-lg dark:bg-gray-800 dark:border-gray-700 dark:text-white"
-                  key={index}
-                >
-                  {suggestion.name}
-                </li>
-              </Link>
-            );
-          }
-        )}
+                {suggestion.name}
+              </li>
+            </Link>
+          );
+        })}
       </ul>
     );
   };
@@ -62,3 +68,4 @@ const AutoComplete = ({ data }: any) => {
 };
 
 export default AutoComplete;
+

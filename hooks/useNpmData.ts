@@ -1,14 +1,12 @@
 import { useState, useEffect } from 'react';
 import { NpmPackage } from '../types';
-import { fectNpmPackage } from '../helpers/utils';
+import { fetchNpmPackage } from '../helpers/utils';
 
 interface UseNpmDataResult {
   data: NpmPackage | undefined;
   isLoading: boolean;
   error: string | null;
 }
-
-const cache = new Map<string, NpmPackage>();
 
 export const useNpmData = (packageName: string | undefined): UseNpmDataResult => {
   const [data, setData] = useState<NpmPackage | undefined>();
@@ -26,17 +24,10 @@ export const useNpmData = (packageName: string | undefined): UseNpmDataResult =>
         setIsLoading(true);
         setError(null);
 
-        // Check cache first
-        if (cache.has(packageName)) {
-          setData(cache.get(packageName));
-          setIsLoading(false);
-          return;
-        }
+        // fetchNpmPackage already handles caching via requestCache
+        const packageData = await fetchNpmPackage(packageName);
 
-        const packageData = await fectNpmPackage(packageName);
-        
         if (packageData && packageData.name) {
-          cache.set(packageName, packageData);
           setData(packageData);
         } else {
           throw new Error('Invalid package data received');

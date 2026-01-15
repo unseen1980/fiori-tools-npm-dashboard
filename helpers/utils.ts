@@ -1,26 +1,29 @@
 import { requestCache } from './requestCache';
 
-export async function fectNpmPackageByVersion(name: string, version: string): Promise<any> {
+export async function fetchNpmPackageByVersion(name: string, version: string): Promise<any> {
   const fixedVersion = version.replace(/[\^~]/g, "");
-  const endpoint = `https://registry.npmjs.org/${name}/${fixedVersion}`;
+  const cacheKey = `package:${name}@${fixedVersion}`;
 
-  try {
-    const res = await fetch(endpoint);
-    if (!res.ok) {
-      console.error(`Failed to fetch package ${name}@${version}: ${res.status}`);
+  return requestCache.get(cacheKey, async () => {
+    const endpoint = `https://registry.npmjs.org/${name}/${fixedVersion}`;
+    try {
+      const res = await fetch(endpoint);
+      if (!res.ok) {
+        console.error(`Failed to fetch package ${name}@${version}: ${res.status}`);
+        return {};
+      }
+      const d = await res.json();
+      return d;
+    } catch (error) {
+      console.error(`Error fetching package ${name}@${version}:`, error);
       return {};
     }
-    const d = await res.json();
-    return d;
-  } catch (error) {
-    console.error(`Error fetching package ${name}@${version}:`, error);
-    return {};
-  }
+  });
 }
 
-export async function fectNpmPackage(name: string): Promise<any> {
+export async function fetchNpmPackage(name: string): Promise<any> {
   const cacheKey = `package:${name}`;
-  
+
   return requestCache.get(cacheKey, async () => {
     const endpoint = `https://registry.npmjs.org/${name}`;
     try {
@@ -56,23 +59,9 @@ export async function searchNpmRegistry(text: string): Promise<string[]> {
   }
 }
 
-// export function bytesToSize(bytes: number, decimals = 2, includeSize = false) {
-//   if (bytes === 0) return "0 Bytes";
-
-//   const k = 1024;
-//   const dm = decimals < 0 ? 0 : decimals;
-//   const sizes = ["Bytes", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
-
-//   const i = Math.floor(Math.log(bytes) / Math.log(k));
-
-//   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))}${
-//     includeSize ? sizes[i] : ""
-//   }`;
-// }
-
 export function bytesToSize(bytes: number, decimals = 2, includeSize = false): string {
   if (bytes === 0) return includeSize ? "0 MB" : "0";
-  
+
   const megabytes = bytes / (1024 * 1024);
   return `${parseFloat(megabytes.toFixed(decimals))}${includeSize ? "MB" : ""}`;
 }
@@ -91,17 +80,18 @@ function day(s: string | Date): string | null {
 export async function downloadCounts(pkg: string, start: Date, end: Date): Promise<any[]> {
   const startDay = day(start);
   const endDay = day(end);
-  
+
   if (!startDay || !endDay) {
     console.error('Invalid date range for download counts');
     return [];
   }
-  
+
   const cacheKey = `downloads:${pkg}:${startDay}:${endDay}`;
-  
+
   return requestCache.get(cacheKey, async () => {
-    const endpoint = `https://api.npmjs.org/downloads/range/${startDay}:${endDay}/${encodeURIComponent(pkg)}`;
-    
+    // Use local API proxy to avoid CORS issues with api.npmjs.org
+    const endpoint = `/api/downloads?pkg=${encodeURIComponent(pkg)}&start=${startDay}&end=${endDay}`;
+
     try {
       const res = await fetch(endpoint);
       if (!res.ok) {

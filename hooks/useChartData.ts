@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { NpmPackage, ChartData } from '../types';
-import { bytesToSize, downloadCounts, fectNpmPackageByVersion } from '../helpers/utils';
+import { bytesToSize, downloadCounts, fetchNpmPackageByVersion } from '../helpers/utils';
 import cmp from 'semver-compare';
 import moment from 'moment';
 
@@ -38,7 +38,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
       labels: sortedVersions,
       datasets: [{
         label: 'Number of files',
-        data: sortedVersions.map(ver => 
+        data: sortedVersions.map(ver =>
           npmPackage.versions[ver]?.dist?.fileCount || 0
         ),
         borderColor: 'rgb(255, 99, 132)',
@@ -49,7 +49,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
     // Bundle size chart data
     const latestVersion = sortedVersions[sortedVersions.length - 1];
     const latestSize = npmPackage.versions[latestVersion]?.dist?.unpackedSize || 0;
-    
+
     const bundleSizeData: ChartData = {
       labels: sortedVersions,
       datasets: [{
@@ -99,8 +99,8 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
         const sizes = await Promise.all(
           depNames.map(async (dep) => {
             try {
-              const depData = await fectNpmPackageByVersion(dep, deps[dep]);
-              return depData?.dist?.unpackedSize ? 
+              const depData = await fetchNpmPackageByVersion(dep, deps[dep]);
+              return depData?.dist?.unpackedSize ?
                 parseFloat((depData.dist.unpackedSize / (1024 * 1024)).toFixed(2)) : 0;
             } catch {
               return 0;
@@ -151,7 +151,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
       }));
     };
 
-    fetchDependenciesData().catch(err => 
+    fetchDependenciesData().catch(err =>
       console.error('Error fetching dependencies data:', err)
     );
   }, [npmPackage, sortedVersions, dateRange]);
