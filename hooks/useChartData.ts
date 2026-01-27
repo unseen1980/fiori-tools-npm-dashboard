@@ -12,16 +12,23 @@ interface DependencyData {
   bundledDependencies?: string[];
 }
 
+interface RawDownloadData {
+  day: string;
+  downloads: number;
+}
+
 export const useChartData = (npmPackage: NpmPackage | undefined) => {
   const [chartData, setChartData] = useState<{
     filesNumber?: ChartData;
     bundleSize?: ChartData;
     downloads?: ChartData;
+    rawDownloads?: RawDownloadData[];
     dependencies?: DependencyData;
   }>({});
 
-  const dateRange = useMemo(() => ({
-    start: moment().subtract(1, 'months').toDate(),
+  // Date range for ML prediction training (365 days)
+  const predictionDateRange = useMemo(() => ({
+    start: moment().subtract(1, 'years').toDate(),
     end: new Date()
   }), []);
 
@@ -69,20 +76,35 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
       bundleSize: bundleSizeData,
     }));
 
-    // Fetch downloads data
-    downloadCounts(npmPackage.name, dateRange.start, dateRange.end)
+    // Fetch downloads data (365 days for ML training, last 30 days for display)
+    downloadCounts(npmPackage.name, predictionDateRange.start, predictionDateRange.end)
       .then(downloadsData => {
         if (downloadsData && downloadsData.length > 0) {
+          // Filter out today's incomplete data for display
+          const today = moment().format('YYYY-MM-DD');
+          const completeData = downloadsData.filter((d: any) => d.day !== today);
+          
+          // Use last 30 days of complete data for chart display
+          const displayData = completeData.slice(-30);
+          
           const downloadsChartData: ChartData = {
-            labels: downloadsData.map((d: any) => d.day),
+            labels: displayData.map((d: any) => d.day),
             datasets: [{
               label: 'Daily downloads',
-              data: downloadsData.map((d: any) => d.downloads),
+              data: displayData.map((d: any) => d.downloads),
               borderColor: 'rgb(255, 99, 132)',
               backgroundColor: 'rgba(255, 99, 132, 0.5)',
             }],
           };
-          setChartData(prev => ({ ...prev, downloads: downloadsChartData }));
+          // Store chart data (30 days, excluding today) and raw data for predictions (365 days)
+          setChartData(prev => ({ 
+            ...prev, 
+            downloads: downloadsChartData,
+            rawDownloads: downloadsData.map((d: any) => ({
+              day: d.day,
+              downloads: d.downloads,
+            })),
+          }));
         }
       })
       .catch(err => console.error('Error fetching download counts:', err));
@@ -154,7 +176,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
     fetchDependenciesData().catch(err =>
       console.error('Error fetching dependencies data:', err)
     );
-  }, [npmPackage, sortedVersions, dateRange]);
+  }, [npmPackage, sortedVersions, predictionDateRange]);
 
   return chartData;
 };

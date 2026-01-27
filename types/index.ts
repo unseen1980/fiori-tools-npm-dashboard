@@ -62,3 +62,19 @@ export interface MainPageCardData {
   title: string;
   value: string | number | React.ReactNode | undefined;
 }
+
+export interface PredictionChartData {
+  labels: string[];
+  datasets: {
+    label: string;
+    data: (number | string)[];
+    borderColor?: string | string[];
+    backgroundColor?: string | string[];
+    borderWidth?: number;
+    borderDash?: number[];
+    fill?: boolean | string;
+    tension?: number;
+    pointRadius?: number;
+    pointStyle?: string;
+  }[];
+}
