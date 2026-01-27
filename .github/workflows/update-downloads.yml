@@ -1,9 +1,9 @@
 name: Update NPM Downloads
 
 on:
-  # Run every Monday at 6:00 AM UTC
+  # Run daily at 6:00 AM UTC
   schedule:
-    - cron: '0 6 * * 1'
+    - cron: '0 6 * * *'
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:

@@ -48,7 +48,7 @@ The dashboard displays total npm download counts for all tracked packages. This 
 
 ### How It Works
 
-1. **GitHub Actions Workflow** (`.github/workflows/update-downloads.yml`) runs every Monday at 6:00 AM UTC
+1. **GitHub Actions Workflow** (`.github/workflows/update-downloads.yml`) runs daily at 6:00 AM UTC
 2. The **update script** (`scripts/update-downloads.js`) fetches download counts from npm API
 3. The script updates the embedded cache in `pages/api/bulk-downloads.ts`
 4. Changes are committed and pushed, triggering a Vercel deployment
