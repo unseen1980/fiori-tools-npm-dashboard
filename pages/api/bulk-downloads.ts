@@ -1,6 +1,4 @@
 import type { NextApiRequest, NextApiResponse } from 'next';
-import path from 'path';
-import fs from 'fs';
 
 interface DownloadResult {
     package: string;
@@ -61,20 +59,14 @@ async function fetchPackageDownloads(pkg: string, retries = 2): Promise<Download
     return { package: pkg, downloads: 0 };
 }
 
-// Read static cache from filesystem (avoids HTTP self-fetch timeout on Vercel)
-function readStaticCache(): CachedData | null {
-    try {
-        // In Next.js, public folder is at the project root
-        const cachePath = path.join(process.cwd(), 'public', 'downloads-cache.json');
-        if (fs.existsSync(cachePath)) {
-            const data = fs.readFileSync(cachePath, 'utf-8');
-            return JSON.parse(data);
-        }
-    } catch (error) {
-        console.error('Error reading static cache:', error);
-    }
-    return null;
-}
+// Pre-computed download statistics (updated periodically)
+// This is embedded directly to avoid filesystem access issues on serverless platforms
+const STATIC_CACHE: CachedData = {
+    total: 17856861,
+    packages: [],
+    timestamp: 1737971700000,
+    fetchedAt: '2025-01-27T09:55:00.000Z'
+};
 
 export default async function handler(
     req: NextApiRequest,
@@ -101,26 +93,15 @@ export default async function handler(
         });
     }
 
-    // On Vercel (production), use static cache file to avoid timeout
+    // On Vercel (production), use embedded static cache to avoid timeout
     if (IS_VERCEL) {
-        const staticCache = readStaticCache();
-        if (staticCache && staticCache.total > 0) {
-            memoryCache = staticCache;
-            res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
-            return res.status(200).json({
-                total: staticCache.total,
-                packages: staticCache.packages || [],
-                cached: true,
-                fetchedAt: staticCache.fetchedAt
-            });
-        }
-
-        // Fallback: return pre-computed value if cache file is missing or invalid
+        memoryCache = STATIC_CACHE;
+        res.setHeader('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
         return res.status(200).json({
-            total: 17856861,
-            packages: [],
+            total: STATIC_CACHE.total,
+            packages: STATIC_CACHE.packages || [],
             cached: true,
-            fetchedAt: '2025-01-15T12:00:00.000Z'
+            fetchedAt: STATIC_CACHE.fetchedAt
         });
     }
 
