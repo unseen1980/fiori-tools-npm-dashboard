@@ -65,8 +65,8 @@ async function fetchPackageDownloads(pkg: string, retries = 2): Promise<Download
 const STATIC_CACHE: CachedData = {
     total: 20630309,
     packages: [],
-    timestamp: 1769511574592,
-    fetchedAt: '2026-01-27T10:59:34.592Z'
+    timestamp: 1769513829913,
+    fetchedAt: '2026-01-27T11:37:09.913Z'
 };
 
 export default async function handler(
