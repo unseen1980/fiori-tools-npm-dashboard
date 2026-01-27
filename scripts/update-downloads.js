@@ -17,7 +17,8 @@ const NPM_DOWNLOADS_URL = 'https://api.npmjs.org/downloads/point/last-month';
 const SPECIFIC_SAP_PACKAGES = [
     '@sap/generator-fiori',
     '@sap/ux-ui5-tooling',
-    '@sap/ux-specification'
+    '@sap/ux-specification',
+    '@sap/ux-ui5-fe-mockserver-middleware'
 ];
 const API_FILE_PATH = path.join(__dirname, '..', 'pages', 'api', 'bulk-downloads.ts');
 const DELAY_BETWEEN_REQUESTS = 500; // ms - slightly slower to avoid rate limits

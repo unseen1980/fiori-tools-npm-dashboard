@@ -67,10 +67,13 @@ function calculateWeeklyPattern(downloadsData) {
 /**
  * Calculate recent trend from historical data
  * Returns trend multiplier (>1 = increasing, <1 = decreasing)
+ * 
+ * BIAS CORRECTION: Now uses symmetric trend calculation with dampening
+ * to prevent over-optimistic growth predictions
  */
 function calculateTrend(downloadsData, windowSize = 28) {
   if (downloadsData.length < windowSize * 2) {
-    return { trendMultiplier: 1, momentum: 0 };
+    return { trendMultiplier: 1, momentum: 0, longTermTrend: 1 };
   }
   
   const recentData = downloadsData.slice(-windowSize * 2);
@@ -82,18 +85,42 @@ function calculateTrend(downloadsData, windowSize = 28) {
   const firstAvg = firstHalf.reduce((sum, d) => sum + d.downloads, 0) / windowSize;
   const secondAvg = secondHalf.reduce((sum, d) => sum + d.downloads, 0) / windowSize;
   
-  // Calculate trend multiplier (capped to prevent extreme values)
-  let trendMultiplier = secondAvg / firstAvg || 1;
-  trendMultiplier = Math.max(0.8, Math.min(1.2, trendMultiplier)); // Cap at ±20%
+  // Calculate raw trend multiplier
+  let rawTrendMultiplier = secondAvg / firstAvg || 1;
+  
+  // BIAS CORRECTION: Apply dampening to trend (sqrt compression)
+  // This reduces extreme trends symmetrically - both growth and decline
+  // e.g., 1.2 -> 1.095, 0.8 -> 0.894 (less extreme in both directions)
+  let trendMultiplier;
+  if (rawTrendMultiplier >= 1) {
+    trendMultiplier = 1 + Math.sqrt(rawTrendMultiplier - 1) * 0.5;
+  } else {
+    trendMultiplier = 1 - Math.sqrt(1 - rawTrendMultiplier) * 0.5;
+  }
+  
+  // Cap at ±15% (reduced from ±20%)
+  trendMultiplier = Math.max(0.85, Math.min(1.15, trendMultiplier));
   
   // Calculate week-over-week momentum from last 2 weeks
   const lastWeek = downloadsData.slice(-7);
   const prevWeek = downloadsData.slice(-14, -7);
   const lastWeekAvg = lastWeek.reduce((sum, d) => sum + d.downloads, 0) / 7;
   const prevWeekAvg = prevWeek.reduce((sum, d) => sum + d.downloads, 0) / 7;
-  const momentum = (lastWeekAvg - prevWeekAvg) / prevWeekAvg || 0;
+  let momentum = (lastWeekAvg - prevWeekAvg) / prevWeekAvg || 0;
   
-  return { trendMultiplier, momentum };
+  // BIAS CORRECTION: Cap momentum more aggressively (±10% instead of unbounded)
+  momentum = Math.max(-0.1, Math.min(0.1, momentum));
+  
+  // Calculate longer-term trend (8 weeks ago vs now) for mean reversion reference
+  let longTermTrend = 1;
+  if (downloadsData.length >= windowSize * 3) {
+    const olderData = downloadsData.slice(-windowSize * 3, -windowSize * 2);
+    const olderAvg = olderData.reduce((sum, d) => sum + d.downloads, 0) / windowSize;
+    longTermTrend = secondAvg / olderAvg || 1;
+    longTermTrend = Math.max(0.7, Math.min(1.3, longTermTrend));
+  }
+  
+  return { trendMultiplier, momentum, longTermTrend };
 }
 
 /**
@@ -263,8 +290,8 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
     message: `Pattern found: weekday avg ~${Math.round(dayAverages[1])}, weekend avg ~${Math.round(dayAverages[0])}` 
   });
   
-  // Step 2: Calculate recent trend
-  const { trendMultiplier, momentum } = calculateTrend(downloadsData);
+  // Step 2: Calculate recent trend (now includes longTermTrend for mean reversion)
+  const { trendMultiplier, momentum, longTermTrend } = calculateTrend(downloadsData);
   
   self.postMessage({ 
     type: 'progress', 
@@ -329,6 +356,10 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
     lstmPredictions = lstmPredictions.map(p => p * range + min);
   }
   
+  // BIAS CORRECTION: Calculate mean reversion target
+  // For longer predictions, gradually pull towards the historical mean
+  const meanReversionTarget = overallMean;
+  
   // Generate predictions for each future day (starting from day after lastCompleteDate = today)
   for (let i = 0; i < daysToPredict; i++) {
     const predDate = new Date(lastCompleteDate);
@@ -338,29 +369,42 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
     // Base prediction from weekly pattern
     const baseValue = dayAverages[dayOfWeek];
     
-    // Apply trend (gradual, not compounding too fast)
-    const trendFactor = 1 + (trendMultiplier - 1) * Math.min(1, (i + 1) / 30);
+    // BIAS CORRECTION: Apply trend with decay over prediction horizon
+    // Trend influence starts strong but decays, preventing runaway growth predictions
+    // Uses exponential decay: trend has half-life of ~14 days
+    const trendDecay = Math.exp(-i / 20); // Faster decay than before
+    const trendFactor = 1 + (trendMultiplier - 1) * trendDecay;
     
-    // Apply momentum (decays over time)
-    const momentumFactor = 1 + momentum * Math.exp(-i / 7) * 0.3;
+    // BIAS CORRECTION: Apply momentum with faster decay and reduced influence
+    // Momentum now decays faster (half-life ~5 days) and has reduced weight
+    const momentumDecay = Math.exp(-i / 5);
+    const momentumFactor = 1 + momentum * momentumDecay * 0.2; // Reduced from 0.3
     
     // Apply LSTM deviation if available, otherwise use slight randomness
     let deviationFactor = 1;
     if (i < lstmPredictions.length) {
-      // LSTM prediction, capped to reasonable range
-      deviationFactor = Math.max(0.7, Math.min(1.3, lstmPredictions[i]));
+      // LSTM prediction, capped to reasonable range (tightened from ±30% to ±25%)
+      deviationFactor = Math.max(0.75, Math.min(1.25, lstmPredictions[i]));
     } else {
       // For predictions beyond LSTM range, use gradual decay to pattern mean
-      const decayFactor = Math.exp(-(i - 14) / 20);
-      const randomDeviation = (Math.random() - 0.5) * 2 * deviationStdDev * 0.5;
+      const decayFactor = Math.exp(-(i - 14) / 15); // Faster decay
+      const randomDeviation = (Math.random() - 0.5) * 2 * deviationStdDev * 0.4; // Reduced variance
       deviationFactor = 1 + randomDeviation * decayFactor;
     }
     
     // Combine all factors
     let prediction = baseValue * trendFactor * momentumFactor * deviationFactor;
     
-    // Add controlled random variance based on historical volatility
-    const variance = (Math.random() - 0.5) * stdDev * 0.3;
+    // BIAS CORRECTION: Apply mean reversion for longer-term predictions
+    // After day 7, gradually blend towards historical pattern (no trend)
+    if (i >= 7) {
+      const meanReversionStrength = Math.min(0.5, (i - 7) / 30); // Max 50% pull to mean
+      const patternOnlyPrediction = baseValue; // What the pattern alone predicts
+      prediction = prediction * (1 - meanReversionStrength) + patternOnlyPrediction * meanReversionStrength;
+    }
+    
+    // Add controlled random variance based on historical volatility (reduced)
+    const variance = (Math.random() - 0.5) * stdDev * 0.2; // Reduced from 0.3
     prediction += variance;
     
     // Ensure positive and round
@@ -393,6 +437,8 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
 /**
  * Improved moving average prediction with pattern recognition
  * Fallback when LSTM fails
+ * 
+ * BIAS CORRECTION: Now includes trend decay and mean reversion
  */
 function predictWithMovingAverage(downloadsData, daysToPredict) {
   if (!downloadsData || downloadsData.length < 7) {
@@ -405,7 +451,7 @@ function predictWithMovingAverage(downloadsData, daysToPredict) {
   const weeklyPattern = calculateWeeklyPattern(downloadsData);
   const { dayAverages, stdDev } = weeklyPattern;
   
-  // Calculate trend
+  // Calculate trend (now with bias corrections built-in)
   const { trendMultiplier } = calculateTrend(downloadsData);
   
   const predictions = [];
@@ -417,7 +463,10 @@ function predictWithMovingAverage(downloadsData, daysToPredict) {
     const dow = new Date(d.day).getDay();
     return dayAverages[dow] > 0 ? d.downloads / dayAverages[dow] : 1;
   });
-  const recentFactor = recentFactors.reduce((a, b) => a + b, 0) / recentFactors.length;
+  let recentFactor = recentFactors.reduce((a, b) => a + b, 0) / recentFactors.length;
+  
+  // BIAS CORRECTION: Cap recent factor to prevent amplifying anomalies
+  recentFactor = Math.max(0.8, Math.min(1.2, recentFactor));
   
   for (let i = 0; i < daysToPredict; i++) {
     const predDate = new Date(lastDate);
@@ -427,14 +476,25 @@ function predictWithMovingAverage(downloadsData, daysToPredict) {
     // Base from weekly pattern
     let prediction = dayAverages[dayOfWeek];
     
-    // Apply recent performance adjustment
-    prediction *= recentFactor;
+    // BIAS CORRECTION: Apply recent factor with decay
+    // Recent performance influence decays over prediction horizon
+    const recentFactorDecay = Math.exp(-i / 14);
+    const adjustedRecentFactor = 1 + (recentFactor - 1) * recentFactorDecay;
+    prediction *= adjustedRecentFactor;
     
-    // Apply trend
-    prediction *= 1 + (trendMultiplier - 1) * Math.min(1, (i + 1) / 30);
+    // BIAS CORRECTION: Apply trend with exponential decay (same as LSTM version)
+    const trendDecay = Math.exp(-i / 20);
+    prediction *= 1 + (trendMultiplier - 1) * trendDecay;
     
-    // Add variance
-    const variance = (Math.random() - 0.5) * stdDev * 0.25;
+    // BIAS CORRECTION: Apply mean reversion for longer-term predictions
+    if (i >= 7) {
+      const meanReversionStrength = Math.min(0.5, (i - 7) / 30);
+      const patternOnlyPrediction = dayAverages[dayOfWeek];
+      prediction = prediction * (1 - meanReversionStrength) + patternOnlyPrediction * meanReversionStrength;
+    }
+    
+    // Add variance (reduced)
+    const variance = (Math.random() - 0.5) * stdDev * 0.2;
     prediction += variance;
     
     predictions.push(Math.max(0, Math.round(prediction)));

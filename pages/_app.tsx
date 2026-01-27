@@ -34,6 +34,7 @@ function MyApp({ Component, pageProps }: AppProps) {
         "@sap/generator-fiori",
         "@sap/ux-ui5-tooling",
         "@sap/ux-specification",
+        "@sap/ux-ui5-fe-mockserver-middleware",
       ];
 
       const allModules = Array.from(new Set([...specificSapModules, ...sapUxResults]));
