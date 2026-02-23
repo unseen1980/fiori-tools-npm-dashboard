@@ -61,12 +61,12 @@ async function fetchPackageDownloads(pkg: string, retries = 2): Promise<Download
 
 // Pre-computed download statistics (updated periodically)
 // This is embedded directly to avoid filesystem access issues on serverless platforms
-// Last updated: 2026-02-22 - fetched from npm API for 92 @sap-ux and @sap packages
+// Last updated: 2026-02-23 - fetched from npm API for 92 @sap-ux and @sap packages
 const STATIC_CACHE: CachedData = {
     total: 27105015,
     packages: [],
-    timestamp: 1771742723958,
-    fetchedAt: '2026-02-22T06:45:23.958Z'
+    timestamp: 1771830195768,
+    fetchedAt: '2026-02-23T07:03:15.768Z'
 };
 
 export default async function handler(
