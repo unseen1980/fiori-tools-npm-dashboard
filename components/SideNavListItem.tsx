@@ -3,15 +3,14 @@ import Link from "next/link";
 
 interface SideNavListItemProps {
   name: string;
-  rev: string;
 }
 
-const SideNavListItem: React.FC<SideNavListItemProps> = ({ name, rev }) => {
+const SideNavListItem: React.FC<SideNavListItemProps> = ({ name }) => {
   return (
     <li>
       <Link
         legacyBehavior
-        href={{ pathname: "/" + rev, query: { name: name } }}
+        href={{ pathname: "/" + name, query: { name: name } }}
       >
         <a
           className="flex items-center gap-x-3 py-2 px-2.5 text-xs hover:bg-gray-100 text-slate-700 rounded-md dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white"

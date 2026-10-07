@@ -62,8 +62,7 @@ export default function Layout({ children }: LayoutProps) {
               {dataContext?.map((npmModule) => (
                 <SideNavListItem
                   name={npmModule.name}
-                  rev={npmModule._rev}
-                  key={npmModule._id}
+                  key={npmModule.name}
                 />
               ))}
             </ul>

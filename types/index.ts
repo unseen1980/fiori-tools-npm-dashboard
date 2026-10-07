@@ -42,6 +42,23 @@ export interface NpmPackage {
   };
 }
 
+export interface NpmPackageListItem {
+  name: string;
+  description?: string;
+  'dist-tags': {
+    latest: string;
+    [key: string]: string;
+  };
+  versions: {
+    [version: string]: {
+      dist?: {
+        fileCount?: number;
+        unpackedSize?: number;
+      };
+    };
+  };
+}
+
 export interface DownloadData {
   downloads: number;
   day: string;

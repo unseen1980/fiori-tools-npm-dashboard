@@ -8,7 +8,7 @@ class RequestCache {
   private pendingRequests = new Map<string, Promise<any>>();
   private readonly TTL = 5 * 60 * 1000; // 5 minutes
 
-  async get<T>(key: string, fetcher: () => Promise<T>): Promise<T> {
+  async get<T>(key: string, fetcher: () => Promise<T>, shouldCache?: (data: T) => boolean): Promise<T> {
     // Check if we have a pending request
     const pending = this.pendingRequests.get(key);
     if (pending) {
@@ -24,7 +24,9 @@ class RequestCache {
     // Create new request
     const promise = fetcher()
       .then(data => {
-        this.cache.set(key, { data, timestamp: Date.now() });
+        if (!shouldCache || shouldCache(data)) {
+          this.cache.set(key, { data, timestamp: Date.now() });
+        }
         this.pendingRequests.delete(key);
         return data;
       })

@@ -18,7 +18,7 @@ export async function fetchNpmPackageByVersion(name: string, version: string): P
       console.error(`Error fetching package ${name}@${version}:`, error);
       return {};
     }
-  });
+  }, (d: any) => !!d && !!d.version && !!d.dist);
 }
 
 export async function fetchNpmPackage(name: string): Promise<any> {
@@ -38,7 +38,34 @@ export async function fetchNpmPackage(name: string): Promise<any> {
       console.error(`Error fetching package ${name}:`, error);
       return {};
     }
-  });
+  }, (d: any) => !!d && !!d.name);
+}
+
+/**
+ * Fetch abbreviated package metadata (much smaller than the full document)
+ * for list views. The abbreviated format still contains dist-tags and
+ * per-version dist info, but omits fields like description, license,
+ * maintainers and time - use fetchNpmPackage for details pages.
+ */
+export async function fetchNpmPackageList(name: string): Promise<any> {
+  const cacheKey = `package:${name}:abbreviated`;
+
+  return requestCache.get(cacheKey, async () => {
+    const endpoint = `https://registry.npmjs.org/${encodeURIComponent(name)}`;
+    try {
+      const res = await fetch(endpoint, {
+        headers: { Accept: 'application/vnd.npm.install-v1+json' },
+      });
+      if (!res.ok) {
+        console.error(`Failed to fetch package ${name}: ${res.status}`);
+        return {};
+      }
+      return await res.json();
+    } catch (error) {
+      console.error(`Error fetching package ${name}:`, error);
+      return {};
+    }
+  }, (d: any) => !!d && !!d.name && !!d.versions && !!d['dist-tags']);
 }
 
 export async function searchNpmRegistry(text: string): Promise<string[]> {
@@ -104,7 +131,7 @@ export async function downloadCounts(pkg: string, start: Date, end: Date): Promi
       console.error(`Error fetching download counts for ${pkg}:`, error);
       return [];
     }
-  });
+  }, (d: any[]) => Array.isArray(d) && d.length > 0);
 }
 
 export function getPercent(num1: number, num2: number): string {

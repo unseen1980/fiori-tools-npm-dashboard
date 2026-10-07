@@ -1,14 +1,14 @@
 import "../styles/globals.css";
 import type { AppProps } from "next/app";
 import React, { useEffect, useState } from "react";
-import { searchNpmRegistry, fetchNpmPackage } from "../helpers/utils";
+import { searchNpmRegistry, fetchNpmPackageList } from "../helpers/utils";
 import { requestCache } from "../helpers/requestCache";
 import { Analytics } from "@vercel/analytics/react";
-import { NpmPackage } from "../types";
+import { NpmPackageListItem } from "../types";
 import ErrorBoundary from "../components/ErrorBoundary";
 
 interface DataContextType {
-  data: NpmPackage[] | undefined;
+  data: NpmPackageListItem[] | undefined;
   isLoading: boolean;
   error: string | null;
   refresh: () => void;
@@ -17,7 +17,7 @@ interface DataContextType {
 export const DataContext = React.createContext<DataContextType | undefined>(undefined);
 
 function MyApp({ Component, pageProps }: AppProps) {
-  const [data, setData] = useState<NpmPackage[]>();
+  const [data, setData] = useState<NpmPackageListItem[]>();
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -39,7 +39,9 @@ function MyApp({ Component, pageProps }: AppProps) {
 
       const allModules = Array.from(new Set([...specificSapModules, ...sapUxResults]));
 
-      const packagePromises = allModules.map(npmModule => fetchNpmPackage(npmModule));
+      // Abbreviated metadata is far smaller than the full document and has
+      // everything the list/sidebar need (name, dist-tags, version sizes)
+      const packagePromises = allModules.map(npmModule => fetchNpmPackageList(npmModule));
       const packages = await Promise.all(packagePromises);
 
       const validPackages = packages.filter(pkg => pkg && pkg.name);

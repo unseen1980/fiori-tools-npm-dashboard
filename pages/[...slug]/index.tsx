@@ -11,8 +11,13 @@ import moment from "moment";
 
 const Details = () => {
   const router = useRouter();
-  const { name } = router.query;
-  const packageName = typeof name === 'string' ? name : undefined;
+  const { name, slug } = router.query;
+
+  // New URLs use the package name as the path (scoped names span multiple
+  // segments, e.g. /@sap-ux/fe-fpm-writer). Legacy URLs of the form
+  // /{_rev}?name=... are still supported via the query parameter.
+  const slugName = Array.isArray(slug) ? slug.join('/') : (typeof slug === 'string' ? slug : undefined);
+  const packageName = typeof name === 'string' ? name : slugName;
   
   const { data, isLoading, error } = useNpmData(packageName);
   const chartData = useChartData(data);

@@ -66,9 +66,10 @@ const Home: NextPage<HomeProps> = () => {
 
     // Apply search filter
     if (searchTerm) {
+      // List data uses abbreviated npm metadata which has no description,
+      // so search matches on the package name only
       filtered = filtered.filter(pkg =>
-        pkg.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        pkg.description?.toLowerCase().includes(searchTerm.toLowerCase())
+        pkg.name.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
 
@@ -238,10 +239,10 @@ const Home: NextPage<HomeProps> = () => {
 
                                 return (
                                   <tr
-                                    key={v._id}
+                                    key={v.name}
                                     className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer"
                                     onClick={() => router.push({
-                                      pathname: "/" + v._rev,
+                                      pathname: "/" + v.name,
                                       query: { name: v.name },
                                     })}
                                   >
