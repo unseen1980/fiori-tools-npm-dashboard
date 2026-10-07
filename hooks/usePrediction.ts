@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { PredictionResult, DownloadDataPoint } from '../helpers/prediction';
+import type { PredictionResult, DownloadDataPoint } from '../helpers/prediction';
 
 export interface UsePredictionOptions {
   daysToPredict?: number;
@@ -37,7 +37,6 @@ export function usePrediction(
   const [progressMessage, setProgressMessage] = useState('');
   
   const workerRef = useRef<Worker | null>(null);
-  const isInitializedRef = useRef(false);
 
   // Initialize worker on mount (client-side only)
   useEffect(() => {
@@ -51,9 +50,6 @@ export function usePrediction(
       const { type, result, error: workerError, progress: workerProgress, message } = e.data;
       
       switch (type) {
-        case 'ready':
-          isInitializedRef.current = true;
-          break;
         case 'start':
           setIsLoading(true);
           setProgress(0);

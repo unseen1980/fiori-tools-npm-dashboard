@@ -216,7 +216,9 @@ const Home: NextPage<HomeProps> = () => {
                                 const currentSize = latestVersion?.dist?.unpackedSize || 0;
                                 const sizeDisplay = bytesToSize(currentSize, 2, true);
 
-                                const versionKeys = Object.keys(v.versions);
+                                // Sort version keys semantically - object key order from the
+                                // npm registry is not guaranteed to be semver order
+                                const versionKeys = Object.keys(v.versions).sort(cmp);
                                 let changeIndicator = <b> - </b>;
 
                                 if (versionKeys.length >= 2) {

@@ -18,6 +18,18 @@ function getTodayDateString() {
 }
 
 /**
+ * Get the day-of-week (0=Sunday..6=Saturday) for a YYYY-MM-DD date string.
+ * Parsing is done in UTC so results are consistent regardless of the
+ * user's local timezone. (new Date('YYYY-MM-DD') creates a UTC-midnight
+ * Date, and calling .getDay() on it returns the local weekday, which is
+ * off by one in timezones behind UTC.)
+ */
+function getDayOfWeekFromDateString(dateStr) {
+  // Midday anchor avoids any edge cases around UTC date boundaries
+  return new Date(dateStr + 'T12:00:00Z').getUTCDay();
+}
+
+/**
  * Filter out incomplete current day data
  * Today's data may be incomplete (partial downloads), so exclude it from calculations
  */
@@ -35,7 +47,7 @@ function calculateWeeklyPattern(downloadsData) {
   const dayCounts = [0, 0, 0, 0, 0, 0, 0];
   
   downloadsData.forEach(d => {
-    const dayOfWeek = new Date(d.day).getDay();
+    const dayOfWeek = getDayOfWeekFromDateString(d.day);
     dayTotals[dayOfWeek] += d.downloads;
     dayCounts[dayOfWeek]++;
   });
@@ -177,7 +189,7 @@ async function trainTrendModel(model, downloadsData, weeklyPattern, sequenceLeng
   
   // Calculate deviation ratios: actual / expected for each day
   const deviationRatios = downloadsData.map(d => {
-    const dayOfWeek = new Date(d.day).getDay();
+    const dayOfWeek = getDayOfWeekFromDateString(d.day);
     const expected = dayAverages[dayOfWeek];
     return expected > 0 ? d.downloads / expected : 1;
   });
@@ -234,12 +246,13 @@ async function trainTrendModel(model, downloadsData, weeklyPattern, sequenceLeng
  */
 function generateFutureDates(startDate, days, includeStartPlusOne = true) {
   const dates = [];
-  const start = new Date(startDate);
+  const start = new Date(startDate + 'T12:00:00Z');
   const startOffset = includeStartPlusOne ? 1 : 0;
   
   for (let i = startOffset; i < startOffset + days; i++) {
-    const futureDate = new Date(start);
-    futureDate.setDate(start.getDate() + i);
+    // Pure UTC arithmetic: local-timezone setDate() on a UTC-parsed date
+    // would skip or repeat days in timezones that are not UTC+0
+    const futureDate = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
     dates.push(futureDate.toISOString().substring(0, 10));
   }
   
@@ -321,7 +334,7 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
   
   // Get recent deviation ratios for variance calculation
   const recentDeviations = downloadsData.slice(-14).map(d => {
-    const dayOfWeek = new Date(d.day).getDay();
+    const dayOfWeek = getDayOfWeekFromDateString(d.day);
     return dayAverages[dayOfWeek] > 0 ? d.downloads / dayAverages[dayOfWeek] : 1;
   });
   const deviationStdDev = Math.sqrt(
@@ -362,9 +375,8 @@ async function predictWithPatternAnchor(downloadsData, daysToPredict) {
   
   // Generate predictions for each future day (starting from day after lastCompleteDate = today)
   for (let i = 0; i < daysToPredict; i++) {
-    const predDate = new Date(lastCompleteDate);
-    predDate.setDate(lastCompleteDate.getDate() + i + 1);
-    const dayOfWeek = predDate.getDay();
+    const predDate = new Date(lastCompleteDate.getTime() + (i + 1) * 24 * 60 * 60 * 1000);
+    const dayOfWeek = predDate.getUTCDay();
     
     // Base prediction from weekly pattern
     const baseValue = dayAverages[dayOfWeek];
@@ -460,7 +472,7 @@ function predictWithMovingAverage(downloadsData, daysToPredict) {
   // Use last 4 weeks to calculate recent adjustment factors
   const last28Days = downloadsData.slice(-28);
   const recentFactors = last28Days.map(d => {
-    const dow = new Date(d.day).getDay();
+    const dow = getDayOfWeekFromDateString(d.day);
     return dayAverages[dow] > 0 ? d.downloads / dayAverages[dow] : 1;
   });
   let recentFactor = recentFactors.reduce((a, b) => a + b, 0) / recentFactors.length;
@@ -469,9 +481,8 @@ function predictWithMovingAverage(downloadsData, daysToPredict) {
   recentFactor = Math.max(0.8, Math.min(1.2, recentFactor));
   
   for (let i = 0; i < daysToPredict; i++) {
-    const predDate = new Date(lastDate);
-    predDate.setDate(lastDate.getDate() + i + 1);
-    const dayOfWeek = predDate.getDay();
+    const predDate = new Date(lastDate.getTime() + (i + 1) * 24 * 60 * 60 * 1000);
+    const dayOfWeek = predDate.getUTCDay();
     
     // Base from weekly pattern
     let prediction = dayAverages[dayOfWeek];

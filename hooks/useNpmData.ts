@@ -19,6 +19,8 @@ export const useNpmData = (packageName: string | undefined): UseNpmDataResult =>
       return;
     }
 
+    let cancelled = false;
+
     const fetchData = async () => {
       try {
         setIsLoading(true);
@@ -27,20 +29,29 @@ export const useNpmData = (packageName: string | undefined): UseNpmDataResult =>
         // fetchNpmPackage already handles caching via requestCache
         const packageData = await fetchNpmPackage(packageName);
 
+        if (cancelled) return;
+
         if (packageData && packageData.name) {
           setData(packageData);
         } else {
           throw new Error('Invalid package data received');
         }
       } catch (err) {
+        if (cancelled) return;
         console.error(`Error fetching package ${packageName}:`, err);
         setError(`Failed to load package data for ${packageName}`);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) {
+          setIsLoading(false);
+        }
       }
     };
 
     fetchData();
+
+    return () => {
+      cancelled = true;
+    };
   }, [packageName]);
 
   return { data, isLoading, error };

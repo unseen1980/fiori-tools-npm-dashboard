@@ -5,7 +5,7 @@ export async function fetchNpmPackageByVersion(name: string, version: string): P
   const cacheKey = `package:${name}@${fixedVersion}`;
 
   return requestCache.get(cacheKey, async () => {
-    const endpoint = `https://registry.npmjs.org/${name}/${fixedVersion}`;
+    const endpoint = `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(fixedVersion)}`;
     try {
       const res = await fetch(endpoint);
       if (!res.ok) {
@@ -25,7 +25,7 @@ export async function fetchNpmPackage(name: string): Promise<any> {
   const cacheKey = `package:${name}`;
 
   return requestCache.get(cacheKey, async () => {
-    const endpoint = `https://registry.npmjs.org/${name}`;
+    const endpoint = `https://registry.npmjs.org/${encodeURIComponent(name)}`;
     try {
       const res = await fetch(endpoint);
       if (!res.ok) {

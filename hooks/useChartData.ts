@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react';
 import { NpmPackage, ChartData } from '../types';
 import { bytesToSize, downloadCounts, fetchNpmPackageByVersion } from '../helpers/utils';
 import cmp from 'semver-compare';
-import moment from 'moment';
 
 interface DependencyData {
   dependencies?: ChartData;
@@ -28,7 +27,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
 
   // Date range for ML prediction training (365 days)
   const predictionDateRange = useMemo(() => ({
-    start: moment().subtract(1, 'years').toDate(),
+    start: new Date(Date.now() - 365 * 24 * 60 * 60 * 1000),
     end: new Date()
   }), []);
 
@@ -60,7 +59,7 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
     const bundleSizeData: ChartData = {
       labels: sortedVersions,
       datasets: [{
-        label: `Bundle size ${bytesToSize(latestSize, 2, true).slice(-2)}`,
+        label: 'Bundle size (MB)',
         data: sortedVersions.map(ver => {
           const size = npmPackage.versions[ver]?.dist?.unpackedSize || 0;
           return parseFloat(bytesToSize(size, 2, false));
@@ -80,8 +79,9 @@ export const useChartData = (npmPackage: NpmPackage | undefined) => {
     downloadCounts(npmPackage.name, predictionDateRange.start, predictionDateRange.end)
       .then(downloadsData => {
         if (downloadsData && downloadsData.length > 0) {
-          // Filter out today's incomplete data for display
-          const today = moment().format('YYYY-MM-DD');
+          // Filter out today's incomplete data for display.
+          // npm download data uses UTC days, so compare against the UTC date.
+          const today = new Date().toISOString().substring(0, 10);
           const completeData = downloadsData.filter((d: any) => d.day !== today);
           
           // Use last 30 days of complete data for chart display

@@ -19,7 +19,7 @@ const MainPageCard: React.FC<MainPageCardProps> = ({ values }) => {
       </div>
       <div className="p-4 md:p-5">
         <h3 className="text-lg font-bold text-gray-800 dark:text-white text-3xl">
-          {values.value || 'Loading...'}
+          {values.value ?? 'Loading...'}
         </h3>
       </div>
     </div>

@@ -1,7 +1,6 @@
 import Head from "next/head";
 import SideNavListItem from "./SideNavListItem";
-import AutoComplete from "./AutoComplete";
-import React, { useMemo } from "react";
+import React from "react";
 import Link from "next/link";
 import { DataContext } from "../pages/_app";
 
@@ -12,14 +11,7 @@ interface LayoutProps {
 export default function Layout({ children }: LayoutProps) {
   const context = React.useContext(DataContext);
   const dataContext = context?.data;
-  
-  const autoCompleteData = useMemo(() => {
-    if (!dataContext) return [];
-    return dataContext.map((d) => ({
-      name: d.name,
-      pathname: d._rev,
-    }));
-  }, [dataContext]);
+
   return (
     <>
       <Head>

@@ -198,8 +198,8 @@ async function main() {
         console.log(`Total downloads: ${totalDownloads.toLocaleString()}`);
         console.log(`File updated: ${wasUpdated ? 'Yes' : 'No'}`);
         
-        // Exit with appropriate code for CI
-        process.exit(wasUpdated ? 0 : 0);
+        // Always exit successfully - the GitHub workflow detects changes via git diff
+        process.exit(0);
     } catch (error) {
         console.error('Error:', error.message);
         process.exit(1);
